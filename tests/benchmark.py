@@ -1,6 +1,7 @@
 import httpx
 import asyncio
 import time
+import uuid
 
 BASE_URL = "http://localhost:8000"
 
@@ -92,6 +93,56 @@ async def run_benchmark():
         print(f"Latency Reduction:        {stats['latency_reduction_percent']}%")
         print(f"Est. Cost Savings:        {stats['estimated_cost_savings_percent']}%")
         print("=" * 60)
+
+        await run_async_throughput_test(client, n=10)
+
+
+async def run_async_throughput_test(client: httpx.AsyncClient, n: int = 10):
+    """Fires n concurrent cache-miss requests and measures wall-clock time.
+    With the LLM call moved onto Kafka, the API accepts all n requests
+    without serializing on Groq round-trips - it either resolves them
+    within RESPONSE_TIMEOUT_SECONDS or hands back a job_id to poll."""
+    print(f"\n[Phase 3] Concurrent load test ({n} simultaneous cache misses)...")
+    print("-" * 60)
+
+    prompts = [f"Unique async load test prompt {uuid.uuid4().hex[:8]}" for _ in range(n)]
+
+    start = time.time()
+    responses = await asyncio.gather(
+        *[client.post(f"{BASE_URL}/query", json={"prompt": p}) for p in prompts]
+    )
+    wall_clock = time.time() - start
+
+    done = 0
+    processing = []
+    for r in responses:
+        data = r.json()
+        if r.status_code == 202:
+            processing.append(data["job_id"])
+        else:
+            done += 1
+
+    print(f"Requests fired concurrently:              {n}")
+    print(f"Wall-clock time for all {n} requests:      {wall_clock:.2f}s")
+    print(f"Resolved synchronously (within timeout):   {done}")
+    print(f"Returned 202 processing (polling needed):  {len(processing)}")
+    print(f"Effective throughput:                      {n / wall_clock:.2f} req/s")
+
+    if processing:
+        print(f"\nPolling /status for {len(processing)} in-flight job(s)...")
+        pending = set(processing)
+        poll_start = time.time()
+        while pending and time.time() - poll_start < 30:
+            for job_id in list(pending):
+                r = await client.get(f"{BASE_URL}/status/{job_id}")
+                if r.json().get("status") == "done":
+                    pending.discard(job_id)
+            if pending:
+                await asyncio.sleep(1)
+        resolved = len(processing) - len(pending)
+        print(f"Jobs resolved via polling: {resolved}/{len(processing)}")
+
+    print("=" * 60)
 
 if __name__ == "__main__":
     asyncio.run(run_benchmark())
