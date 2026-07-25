@@ -1,5 +1,34 @@
 import app.cache as cache
-from app.cache import normalize_query
+from app.cache import get_adaptive_threshold, normalize_query
+
+
+def test_get_adaptive_threshold_factual_question():
+    assert get_adaptive_threshold("Who invented the telephone?") == 0.90
+
+
+def test_get_adaptive_threshold_definition_question():
+    assert get_adaptive_threshold("Define entropy") == 0.82
+
+
+def test_get_adaptive_threshold_explanation_question():
+    assert get_adaptive_threshold("Explain how neural networks work") == 0.76
+
+
+def test_get_adaptive_threshold_how_does_is_explanation():
+    assert get_adaptive_threshold("How does photosynthesis work?") == 0.76
+
+
+def test_get_adaptive_threshold_unmatched_prompt_gets_default():
+    assert get_adaptive_threshold("Random unrelated statement") == 0.82
+
+
+def test_get_adaptive_threshold_factual_pattern_takes_precedence():
+    # contains both "capital" (factual) and "what is" (definition) - factual wins
+    assert get_adaptive_threshold("What is the capital of Kazakhstan?") == 0.90
+
+
+def test_get_adaptive_threshold_is_case_insensitive():
+    assert get_adaptive_threshold("WHO INVENTED the telephone?") == 0.90
 
 
 def test_normalize_query_lowercases_and_strips_outer_whitespace():
