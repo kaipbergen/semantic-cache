@@ -49,7 +49,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 
 ## Testing
 - [x] pytest fixtures providing isolated Redis + FAISS state per test (Day 1, 2026-07-25)
-- [ ] Unit tests for normalize_query edge cases (punctuation, whitespace, casing)
+- [x] Unit tests for normalize_query edge cases (punctuation, whitespace, casing) (Day 1, 2026-07-25)
 - [ ] Unit tests for get_adaptive_threshold pattern matching across categories
 - [ ] Unit tests for get_ttl keyword classification
 - [ ] Integration test: seed cache then assert /query returns a cache hit

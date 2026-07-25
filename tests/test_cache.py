@@ -1,4 +1,29 @@
 import app.cache as cache
+from app.cache import normalize_query
+
+
+def test_normalize_query_lowercases_and_strips_outer_whitespace():
+    assert normalize_query("  Hello World  ") == "hello world"
+
+
+def test_normalize_query_removes_punctuation():
+    assert normalize_query("What's the capital of France?!") == "whats the capital of france"
+
+
+def test_normalize_query_collapses_internal_whitespace():
+    assert normalize_query("hello    world\tfoo\nbar") == "hello world foo bar"
+
+
+def test_normalize_query_makes_casing_and_punctuation_equivalent():
+    assert normalize_query("Hello, World!") == normalize_query("hello world")
+
+
+def test_normalize_query_empty_string_stays_empty():
+    assert normalize_query("") == ""
+
+
+def test_normalize_query_only_punctuation_becomes_empty():
+    assert normalize_query("???!!!") == ""
 
 
 def test_isolated_cache_round_trip(isolated_cache):
