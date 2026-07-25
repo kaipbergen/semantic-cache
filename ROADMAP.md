@@ -48,7 +48,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [ ] Metrics on index size/memory footprint exposed via /stats
 
 ## Testing
-- [ ] pytest fixtures providing isolated Redis + FAISS state per test
+- [x] pytest fixtures providing isolated Redis + FAISS state per test (Day 1, 2026-07-25)
 - [ ] Unit tests for normalize_query edge cases (punctuation, whitespace, casing)
 - [ ] Unit tests for get_adaptive_threshold pattern matching across categories
 - [ ] Unit tests for get_ttl keyword classification
