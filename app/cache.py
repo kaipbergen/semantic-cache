@@ -14,8 +14,9 @@ SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", 0.85))
 CROSS_ENCODER_THRESHOLD = float(os.getenv("CROSS_ENCODER_THRESHOLD", 0.5))
 CACHE_TTL_SHORT = int(os.getenv("CACHE_TTL_SHORT", 3600))
 CACHE_TTL_LONG = int(os.getenv("CACHE_TTL_LONG", 86400))
-INDEX_PATH = "/app/faiss_index/index.faiss"
-STORE_PATH = "/app/faiss_index/prompt_store.pkl"
+INDEX_DIR = os.getenv("INDEX_DIR", "/app/faiss_index")
+INDEX_PATH = os.path.join(INDEX_DIR, "index.faiss")
+STORE_PATH = os.path.join(INDEX_DIR, "prompt_store.pkl")
 
 # Bi-encoder for fast retrieval
 embedder = SentenceTransformer("multi-qa-mpnet-base-dot-v1")

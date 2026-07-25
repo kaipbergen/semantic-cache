@@ -42,7 +42,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [ ] Background task to periodically prune expired entries from prompt_store
 - [ ] Migration path from IndexFlatIP to IndexIVFFlat for larger-scale recall/perf tradeoff
 - [ ] Index integrity check on startup (detect prompt_store/index size mismatch)
-- [ ] Configurable index storage path via env var (currently hardcoded /app path)
+- [x] Configurable index storage path via env var (currently hardcoded /app path) (Day 1, 2026-07-25)
 - [ ] Export cache contents to JSONL for inspection/debugging
 - [ ] CLI script to rebuild the FAISS index from Redis contents alone (disaster recovery)
 - [ ] Metrics on index size/memory footprint exposed via /stats
