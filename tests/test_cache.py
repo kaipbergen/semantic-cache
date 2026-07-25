@@ -1,5 +1,25 @@
 import app.cache as cache
-from app.cache import get_adaptive_threshold, normalize_query
+from app.cache import CACHE_TTL_LONG, CACHE_TTL_SHORT, get_adaptive_threshold, get_ttl, normalize_query
+
+
+def test_get_ttl_explain_keyword_gets_long_ttl():
+    assert get_ttl("Explain quantum computing") == CACHE_TTL_LONG
+
+
+def test_get_ttl_tell_me_about_keyword_gets_long_ttl():
+    assert get_ttl("Tell me about black holes") == CACHE_TTL_LONG
+
+
+def test_get_ttl_how_does_keyword_gets_long_ttl():
+    assert get_ttl("How does a car engine work?") == CACHE_TTL_LONG
+
+
+def test_get_ttl_prompt_without_keyword_gets_short_ttl():
+    assert get_ttl("Who invented the telephone?") == CACHE_TTL_SHORT
+
+
+def test_get_ttl_keyword_match_is_case_insensitive():
+    assert get_ttl("EXPLAIN how gravity works") == CACHE_TTL_LONG
 
 
 def test_get_adaptive_threshold_factual_question():
