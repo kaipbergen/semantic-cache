@@ -167,6 +167,18 @@ def seed_cache(request: SeedRequest):
     return {"message": "Cache entry seeded", "prompt": request.prompt}
 
 
+@app.get("/cache/entries")
+def list_cache_entries(limit: int = 20, offset: int = 0):
+    from app.cache import prompt_store
+
+    if limit < 1 or offset < 0:
+        raise HTTPException(status_code=400, detail="limit must be >= 1 and offset must be >= 0")
+
+    page = prompt_store[offset : offset + limit]
+    entries = [{"prompt": p, "ttl_seconds": redis_client.ttl(p)} for p in page]
+    return {"total": len(prompt_store), "limit": limit, "offset": offset, "entries": entries}
+
+
 @app.get("/status/{job_id}")
 def get_job_status(job_id: str):
     raw = redis_client.get(f"status:{job_id}")
