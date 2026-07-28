@@ -1,3 +1,7 @@
+import pytest
+from fastapi import HTTPException
+
+
 def test_query_rejects_empty_prompt(api_client):
     response = api_client.post("/query", json={"prompt": ""})
     assert response.status_code == 400
@@ -73,3 +77,36 @@ def test_list_cache_entries_pagination(api_client):
 def test_list_cache_entries_rejects_invalid_pagination(api_client):
     response = api_client.get("/cache/entries", params={"limit": 0})
     assert response.status_code == 400
+
+
+def test_rate_limit_blocks_requests_once_bucket_is_exhausted(api_client, monkeypatch):
+    import app.main as main_module
+
+    monkeypatch.setattr(main_module, "RATE_LIMIT_CAPACITY", 2)
+    monkeypatch.setattr(main_module, "RATE_LIMIT_REFILL_PER_SECOND", 0)
+    monkeypatch.setattr(main_module, "rate_limit_buckets", {})
+
+    api_client.post("/cache/seed", json={"prompt": "ping", "response": "pong"})
+
+    first = api_client.post("/query", json={"prompt": "ping"})
+    second = api_client.post("/query", json={"prompt": "ping"})
+    third = api_client.post("/query", json={"prompt": "ping"})
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert third.status_code == 429
+
+
+def test_rate_limit_is_tracked_per_client_ip(monkeypatch):
+    import app.main as main_module
+
+    monkeypatch.setattr(main_module, "RATE_LIMIT_CAPACITY", 1)
+    monkeypatch.setattr(main_module, "RATE_LIMIT_REFILL_PER_SECOND", 0)
+    monkeypatch.setattr(main_module, "rate_limit_buckets", {})
+
+    main_module.check_rate_limit("1.1.1.1")
+    with pytest.raises(HTTPException):
+        main_module.check_rate_limit("1.1.1.1")
+
+    # A different client IP has its own bucket and is unaffected.
+    main_module.check_rate_limit("2.2.2.2")

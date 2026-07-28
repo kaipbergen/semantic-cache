@@ -6,7 +6,7 @@ import uuid
 from contextlib import asynccontextmanager
 
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -21,6 +21,36 @@ from app.kafka_client import (
 RESPONSE_TIMEOUT_SECONDS = float(os.getenv("RESPONSE_TIMEOUT_SECONDS", 8))
 STATUS_TTL_SECONDS = 300
 MAX_PROMPT_LENGTH = int(os.getenv("MAX_PROMPT_LENGTH", 4096))
+RATE_LIMIT_CAPACITY = float(os.getenv("RATE_LIMIT_CAPACITY", 20))
+RATE_LIMIT_REFILL_PER_SECOND = float(os.getenv("RATE_LIMIT_REFILL_PER_SECOND", 5))
+
+
+class TokenBucket:
+    def __init__(self, capacity: float, refill_per_second: float):
+        self.capacity = capacity
+        self.refill_per_second = refill_per_second
+        self.tokens = capacity
+        self.last_refill = time.time()
+
+    def allow(self) -> bool:
+        now = time.time()
+        self.tokens = min(self.capacity, self.tokens + (now - self.last_refill) * self.refill_per_second)
+        self.last_refill = now
+        if self.tokens >= 1:
+            self.tokens -= 1
+            return True
+        return False
+
+
+rate_limit_buckets: dict[str, TokenBucket] = {}
+
+
+def check_rate_limit(client_ip: str):
+    bucket = rate_limit_buckets.setdefault(
+        client_ip, TokenBucket(RATE_LIMIT_CAPACITY, RATE_LIMIT_REFILL_PER_SECOND)
+    )
+    if not bucket.allow():
+        raise HTTPException(status_code=429, detail="Rate limit exceeded")
 
 producer: AIOKafkaProducer | None = None
 # correlation_id -> Future, resolved by consume_responses() when the matching
@@ -90,7 +120,10 @@ def health():
 
 
 @app.post("/query", response_model=PromptResponse)
-async def query(request: PromptRequest):
+async def query(request: PromptRequest, http_request: Request):
+    client_ip = http_request.client.host if http_request.client else "unknown"
+    check_rate_limit(client_ip)
+
     if not request.prompt.strip():
         raise HTTPException(status_code=400, detail="prompt must not be empty")
     if len(request.prompt) > MAX_PROMPT_LENGTH:

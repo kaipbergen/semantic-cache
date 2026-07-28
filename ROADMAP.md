@@ -12,7 +12,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [x] Input validation: enforce max prompt length via env var, 413 on overflow (Day 2, 2026-07-28)
 - [x] POST /cache/seed to manually insert a prompt→response pair without going through Kafka (Day 2, 2026-07-28)
 - [x] GET /cache/entries with pagination to list cached prompts and their TTLs (Day 2, 2026-07-28)
-- [ ] Rate limiting per client IP (token bucket) on /query
+- [x] Rate limiting per client IP (token bucket) on /query (Day 2, 2026-07-28)
 - [ ] Request correlation ID returned in an X-Request-ID response header
 - [ ] Configurable per-request timeout override via query param on /query
 - [ ] /health deep check: verify Redis ping, FAISS index loaded, Kafka broker reachable
