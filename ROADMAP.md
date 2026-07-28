@@ -9,7 +9,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 
 ## API & endpoints
 - [x] Input validation: reject empty/whitespace-only prompts with 400 (Day 2, 2026-07-28)
-- [ ] Input validation: enforce max prompt length via env var, 413 on overflow
+- [x] Input validation: enforce max prompt length via env var, 413 on overflow (Day 2, 2026-07-28)
 - [ ] POST /cache/seed to manually insert a prompt→response pair without going through Kafka
 - [ ] GET /cache/entries with pagination to list cached prompts and their TTLs
 - [ ] Rate limiting per client IP (token bucket) on /query

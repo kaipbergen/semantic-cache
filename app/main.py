@@ -20,6 +20,7 @@ from app.kafka_client import (
 
 RESPONSE_TIMEOUT_SECONDS = float(os.getenv("RESPONSE_TIMEOUT_SECONDS", 8))
 STATUS_TTL_SECONDS = 300
+MAX_PROMPT_LENGTH = int(os.getenv("MAX_PROMPT_LENGTH", 4096))
 
 producer: AIOKafkaProducer | None = None
 # correlation_id -> Future, resolved by consume_responses() when the matching
@@ -92,6 +93,11 @@ def health():
 async def query(request: PromptRequest):
     if not request.prompt.strip():
         raise HTTPException(status_code=400, detail="prompt must not be empty")
+    if len(request.prompt) > MAX_PROMPT_LENGTH:
+        raise HTTPException(
+            status_code=413,
+            detail=f"prompt exceeds max length of {MAX_PROMPT_LENGTH} characters",
+        )
 
     start = time.time()
 
