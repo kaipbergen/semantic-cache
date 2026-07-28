@@ -8,7 +8,7 @@ if an item can't be completed and verified, it stays unchecked and gets picked u
 Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY-MM-DD)`).
 
 ## API & endpoints
-- [ ] Input validation: reject empty/whitespace-only prompts with 400
+- [x] Input validation: reject empty/whitespace-only prompts with 400 (Day 2, 2026-07-28)
 - [ ] Input validation: enforce max prompt length via env var, 413 on overflow
 - [ ] POST /cache/seed to manually insert a prompt→response pair without going through Kafka
 - [ ] GET /cache/entries with pagination to list cached prompts and their TTLs

@@ -50,18 +50,25 @@ sys.modules["sentence_transformers"] = types.SimpleNamespace(
 class FakeRedis:
     def __init__(self):
         self._store = {}
+        self._ttl = {}
 
     def get(self, key):
         return self._store.get(key)
 
     def setex(self, key, ttl, value):
         self._store[key] = value
+        self._ttl[key] = ttl
+
+    def ttl(self, key):
+        return self._ttl.get(key, -2)
 
     def delete(self, key):
+        self._ttl.pop(key, None)
         return 1 if self._store.pop(key, None) is not None else 0
 
     def flushdb(self):
         self._store.clear()
+        self._ttl.clear()
 
 
 @pytest.fixture
@@ -87,3 +94,41 @@ def isolated_cache(monkeypatch):
         },
     )
     return fake_redis
+
+
+class FakeProducer:
+    def __init__(self, *args, **kwargs):
+        self.sent = []
+
+    async def start(self):
+        pass
+
+    async def stop(self):
+        pass
+
+    async def send_and_wait(self, topic, value):
+        self.sent.append((topic, value))
+
+
+@pytest.fixture
+def api_client(isolated_cache, monkeypatch):
+    # The API's lifespan connects to real Kafka on startup and runs a
+    # background consumer task. Tests only exercise HTTP-level behavior, so
+    # both are faked out - no Kafka broker needed to test the endpoints.
+    from fastapi.testclient import TestClient
+
+    import app.main as main_module
+
+    async def fake_start_with_retry(client, name, retries=15, delay=3.0):
+        await client.start()
+
+    async def fake_consume_responses():
+        pass
+
+    monkeypatch.setattr(main_module, "AIOKafkaProducer", FakeProducer)
+    monkeypatch.setattr(main_module, "start_with_retry", fake_start_with_retry)
+    monkeypatch.setattr(main_module, "consume_responses", fake_consume_responses)
+    monkeypatch.setattr(main_module, "redis_client", isolated_cache)
+
+    with TestClient(main_module.app) as client:
+        yield client

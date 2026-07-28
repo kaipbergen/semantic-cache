@@ -90,6 +90,9 @@ def health():
 
 @app.post("/query", response_model=PromptResponse)
 async def query(request: PromptRequest):
+    if not request.prompt.strip():
+        raise HTTPException(status_code=400, detail="prompt must not be empty")
+
     start = time.time()
 
     cached_response, similarity = search_cache(request.prompt)
