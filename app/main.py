@@ -154,6 +154,19 @@ async def query(request: PromptRequest):
     )
 
 
+class SeedRequest(BaseModel):
+    prompt: str
+    response: str
+
+
+@app.post("/cache/seed", status_code=201)
+def seed_cache(request: SeedRequest):
+    if not request.prompt.strip():
+        raise HTTPException(status_code=400, detail="prompt must not be empty")
+    store_cache(request.prompt, request.response)
+    return {"message": "Cache entry seeded", "prompt": request.prompt}
+
+
 @app.get("/status/{job_id}")
 def get_job_status(job_id: str):
     raw = redis_client.get(f"status:{job_id}")

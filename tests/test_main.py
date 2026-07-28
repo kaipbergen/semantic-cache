@@ -24,3 +24,21 @@ def test_query_allows_prompt_at_max_length(api_client, monkeypatch):
     monkeypatch.setattr(main_module, "RESPONSE_TIMEOUT_SECONDS", 0.05)
     response = api_client.post("/query", json={"prompt": "a" * main_module.MAX_PROMPT_LENGTH})
     assert response.status_code == 202
+
+
+def test_seed_cache_then_query_is_a_hit(api_client):
+    seed_response = api_client.post(
+        "/cache/seed", json={"prompt": "What is the capital of France?", "response": "Paris"}
+    )
+    assert seed_response.status_code == 201
+
+    query_response = api_client.post("/query", json={"prompt": "What is the capital of France?"})
+    assert query_response.status_code == 200
+    body = query_response.json()
+    assert body["cached"] is True
+    assert body["response"] == "Paris"
+
+
+def test_seed_cache_rejects_empty_prompt(api_client):
+    response = api_client.post("/cache/seed", json={"prompt": "  ", "response": "Paris"})
+    assert response.status_code == 400
