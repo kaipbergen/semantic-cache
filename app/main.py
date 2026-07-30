@@ -9,6 +9,7 @@ from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.cache import search_cache, store_cache, get_stats, stats, redis_client
 from app.kafka_client import (
@@ -99,6 +100,17 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Semantic Cache API", lifespan=lifespan)
+
+
+class RequestIDMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        return response
+
+
+app.add_middleware(RequestIDMiddleware)
 
 
 class PromptRequest(BaseModel):

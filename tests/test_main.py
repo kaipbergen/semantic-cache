@@ -97,6 +97,17 @@ def test_rate_limit_blocks_requests_once_bucket_is_exhausted(api_client, monkeyp
     assert third.status_code == 429
 
 
+def test_response_includes_generated_x_request_id_header(api_client):
+    response = api_client.get("/health")
+    assert "X-Request-ID" in response.headers
+    assert len(response.headers["X-Request-ID"]) > 0
+
+
+def test_response_echoes_incoming_x_request_id_header(api_client):
+    response = api_client.get("/health", headers={"X-Request-ID": "my-custom-id"})
+    assert response.headers["X-Request-ID"] == "my-custom-id"
+
+
 def test_rate_limit_is_tracked_per_client_ip(monkeypatch):
     import app.main as main_module
 
