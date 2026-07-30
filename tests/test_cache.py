@@ -1,3 +1,7 @@
+import os
+
+import faiss
+
 import app.cache as cache
 from app.cache import CACHE_TTL_LONG, CACHE_TTL_SHORT, get_adaptive_threshold, get_ttl, normalize_query
 
@@ -102,6 +106,24 @@ def test_search_cache_hit_refreshes_ttl(isolated_cache):
     cache.search_cache("Who invented the telephone?")
 
     assert isolated_cache.ttl("Who invented the telephone?") == CACHE_TTL_SHORT
+
+
+def test_save_index_writes_via_temp_file_and_rename(tmp_path, monkeypatch):
+    index_path = str(tmp_path / "index.faiss")
+    store_path = str(tmp_path / "prompt_store.pkl")
+    monkeypatch.setattr(cache, "INDEX_PATH", index_path)
+    monkeypatch.setattr(cache, "STORE_PATH", store_path)
+
+    idx = faiss.IndexFlatIP(cache.dimension)
+    cache._save_index(idx, ["hello"])
+
+    assert os.path.exists(index_path)
+    assert os.path.exists(store_path)
+    assert not os.path.exists(index_path + ".tmp")
+    assert not os.path.exists(store_path + ".tmp")
+
+    loaded_idx = faiss.read_index(index_path)
+    assert loaded_idx.ntotal == 0
 
 
 def test_isolated_cache_state_does_not_leak_between_tests(isolated_cache):

@@ -46,9 +46,15 @@ def _load_index():
 
 def _save_index(idx, store):
     os.makedirs(os.path.dirname(INDEX_PATH), exist_ok=True)
-    faiss.write_index(idx, INDEX_PATH)
-    with open(STORE_PATH, "wb") as f:
+
+    index_tmp_path = INDEX_PATH + ".tmp"
+    faiss.write_index(idx, index_tmp_path)
+    os.replace(index_tmp_path, INDEX_PATH)
+
+    store_tmp_path = STORE_PATH + ".tmp"
+    with open(store_tmp_path, "wb") as f:
         pickle.dump(store, f)
+    os.replace(store_tmp_path, STORE_PATH)
 
 index, prompt_store = _load_index()
 
