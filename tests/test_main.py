@@ -97,6 +97,20 @@ def test_rate_limit_blocks_requests_once_bucket_is_exhausted(api_client, monkeyp
     assert third.status_code == 429
 
 
+def test_http_exception_uses_structured_error_schema(api_client):
+    response = api_client.post("/query", json={"prompt": ""})
+    assert response.status_code == 400
+    body = response.json()
+    assert body == {"error": {"code": 400, "message": "prompt must not be empty"}}
+
+
+def test_http_exception_404_uses_structured_error_schema(api_client):
+    response = api_client.get("/status/nonexistent-job")
+    assert response.status_code == 404
+    body = response.json()
+    assert body == {"error": {"code": 404, "message": "Job not found"}}
+
+
 def test_response_includes_generated_x_request_id_header(api_client):
     response = api_client.get("/health")
     assert "X-Request-ID" in response.headers

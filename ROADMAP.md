@@ -17,7 +17,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [ ] Configurable per-request timeout override via query param on /query
 - [ ] /health deep check: verify Redis ping, FAISS index loaded, Kafka broker reachable
 - [ ] Optional API key auth middleware, enabled via env var
-- [ ] Consistent structured JSON error schema for all HTTPException responses
+- [x] Consistent structured JSON error schema for all HTTPException responses (Day 3, 2026-07-30)
 - [ ] OPTIONS/CORS preflight support for browser-based clients
 - [ ] Query parameter to bypass cache lookup and force a fresh LLM call (?bypass_cache=true)
 
