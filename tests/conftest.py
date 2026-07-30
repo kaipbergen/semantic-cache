@@ -62,6 +62,12 @@ class FakeRedis:
     def ttl(self, key):
         return self._ttl.get(key, -2)
 
+    def expire(self, key, ttl):
+        if key in self._store:
+            self._ttl[key] = ttl
+            return True
+        return False
+
     def delete(self, key):
         self._ttl.pop(key, None)
         return 1 if self._store.pop(key, None) is not None else 0

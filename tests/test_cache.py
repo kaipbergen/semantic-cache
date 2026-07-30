@@ -95,6 +95,15 @@ def test_store_cache_does_not_duplicate_existing_prompt_in_index(isolated_cache)
     assert result == "Paris, France"
 
 
+def test_search_cache_hit_refreshes_ttl(isolated_cache):
+    cache.store_cache("Who invented the telephone?", "Alexander Graham Bell")
+    isolated_cache._ttl["Who invented the telephone?"] = 1
+
+    cache.search_cache("Who invented the telephone?")
+
+    assert isolated_cache.ttl("Who invented the telephone?") == CACHE_TTL_SHORT
+
+
 def test_isolated_cache_state_does_not_leak_between_tests(isolated_cache):
     assert cache.index.ntotal == 0
     assert cache.prompt_store == []

@@ -122,6 +122,7 @@ def search_cache(prompt: str):
     if best_score >= CROSS_ENCODER_THRESHOLD:
         cached_response = redis_client.get(best_prompt)
         if cached_response:
+            redis_client.expire(best_prompt, get_ttl(best_prompt))
             stats["cache_hits"] += 1
             return json.loads(cached_response), candidates[best_idx][1]
 

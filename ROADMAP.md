@@ -22,7 +22,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [ ] Query parameter to bypass cache lookup and force a fresh LLM call (?bypass_cache=true)
 
 ## Cache core
-- [ ] Sliding TTL: refresh a cache entry's expiration on hit
+- [x] Sliding TTL: refresh a cache entry's expiration on hit (Day 3, 2026-07-30)
 - [ ] Configurable max cache size with LRU eviction of oldest FAISS/prompt_store entries
 - [ ] POST /query/batch for looking up multiple prompts in one call
 - [ ] Prompt normalization: strip emoji/non-ASCII punctuation consistently
