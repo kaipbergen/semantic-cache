@@ -85,6 +85,16 @@ def test_isolated_cache_round_trip(isolated_cache):
     assert similarity == 1.0
 
 
+def test_store_cache_does_not_duplicate_existing_prompt_in_index(isolated_cache):
+    cache.store_cache("What is the capital of France?", "Paris")
+    cache.store_cache("What is the capital of France?", "Paris, France")
+    assert cache.index.ntotal == 1
+    assert cache.prompt_store == ["What is the capital of France?"]
+
+    result, _ = cache.search_cache("What is the capital of France?")
+    assert result == "Paris, France"
+
+
 def test_isolated_cache_state_does_not_leak_between_tests(isolated_cache):
     assert cache.index.ntotal == 0
     assert cache.prompt_store == []

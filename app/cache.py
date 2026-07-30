@@ -129,10 +129,13 @@ def search_cache(prompt: str):
     return None, float(distances[0][0])
 
 def store_cache(prompt: str, response: str):
+    ttl = get_ttl(prompt)
+    if prompt in prompt_store:
+        redis_client.setex(prompt, ttl, json.dumps(response))
+        return
     emb = get_embedding(prompt)
     index.add(emb)
     prompt_store.append(prompt)
-    ttl = get_ttl(prompt)
     redis_client.setex(prompt, ttl, json.dumps(response))
     _save_index(index, prompt_store)
 

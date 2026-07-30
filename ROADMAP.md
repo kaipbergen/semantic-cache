@@ -26,7 +26,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [ ] Configurable max cache size with LRU eviction of oldest FAISS/prompt_store entries
 - [ ] POST /query/batch for looking up multiple prompts in one call
 - [ ] Prompt normalization: strip emoji/non-ASCII punctuation consistently
-- [ ] Duplicate-prompt guard in store_cache to avoid re-adding an existing prompt to the index
+- [x] Duplicate-prompt guard in store_cache to avoid re-adding an existing prompt to the index (Day 3, 2026-07-30)
 - [ ] Per-namespace cache isolation via an optional namespace field on requests
 - [ ] Configurable bi-encoder model name via env var
 - [ ] Cache warmup script: preload FAISS index + Redis from a JSONL file of prompt/response pairs
