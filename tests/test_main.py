@@ -122,6 +122,33 @@ def test_response_echoes_incoming_x_request_id_header(api_client):
     assert response.headers["X-Request-ID"] == "my-custom-id"
 
 
+def test_query_rejects_out_of_range_timeout_override(api_client):
+    import app.main as main_module
+
+    response = api_client.post(
+        "/query",
+        json={"prompt": "ping"},
+        params={"timeout": main_module.MAX_TIMEOUT_OVERRIDE_SECONDS + 1},
+    )
+    assert response.status_code == 400
+
+
+def test_query_rejects_non_positive_timeout_override(api_client):
+    response = api_client.post("/query", json={"prompt": "ping"}, params={"timeout": 0})
+    assert response.status_code == 400
+
+
+def test_query_honors_timeout_override_on_cache_miss(api_client):
+    import time
+
+    start = time.time()
+    response = api_client.post("/query", json={"prompt": "uncached prompt"}, params={"timeout": 0.05})
+    elapsed = time.time() - start
+
+    assert response.status_code == 202
+    assert elapsed < 1.0
+
+
 def test_rate_limit_is_tracked_per_client_ip(monkeypatch):
     import app.main as main_module
 

@@ -14,7 +14,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [x] GET /cache/entries with pagination to list cached prompts and their TTLs (Day 2, 2026-07-28)
 - [x] Rate limiting per client IP (token bucket) on /query (Day 2, 2026-07-28)
 - [x] Request correlation ID returned in an X-Request-ID response header (Day 3, 2026-07-30)
-- [ ] Configurable per-request timeout override via query param on /query
+- [x] Configurable per-request timeout override via query param on /query (Day 4, 2026-08-01)
 - [ ] /health deep check: verify Redis ping, FAISS index loaded, Kafka broker reachable
 - [ ] Optional API key auth middleware, enabled via env var
 - [x] Consistent structured JSON error schema for all HTTPException responses (Day 3, 2026-07-30)

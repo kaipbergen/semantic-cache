@@ -24,6 +24,7 @@ STATUS_TTL_SECONDS = 300
 MAX_PROMPT_LENGTH = int(os.getenv("MAX_PROMPT_LENGTH", 4096))
 RATE_LIMIT_CAPACITY = float(os.getenv("RATE_LIMIT_CAPACITY", 20))
 RATE_LIMIT_REFILL_PER_SECOND = float(os.getenv("RATE_LIMIT_REFILL_PER_SECOND", 5))
+MAX_TIMEOUT_OVERRIDE_SECONDS = float(os.getenv("MAX_TIMEOUT_OVERRIDE_SECONDS", 60))
 
 
 class TokenBucket:
@@ -141,7 +142,7 @@ def health():
 
 
 @app.post("/query", response_model=PromptResponse)
-async def query(request: PromptRequest, http_request: Request):
+async def query(request: PromptRequest, http_request: Request, timeout: float | None = None):
     client_ip = http_request.client.host if http_request.client else "unknown"
     check_rate_limit(client_ip)
 
@@ -152,6 +153,12 @@ async def query(request: PromptRequest, http_request: Request):
             status_code=413,
             detail=f"prompt exceeds max length of {MAX_PROMPT_LENGTH} characters",
         )
+    if timeout is not None and not (0 < timeout <= MAX_TIMEOUT_OVERRIDE_SECONDS):
+        raise HTTPException(
+            status_code=400,
+            detail=f"timeout must be > 0 and <= {MAX_TIMEOUT_OVERRIDE_SECONDS} seconds",
+        )
+    response_timeout = timeout if timeout is not None else RESPONSE_TIMEOUT_SECONDS
 
     start = time.time()
 
@@ -182,7 +189,7 @@ async def query(request: PromptRequest, http_request: Request):
     )
 
     try:
-        data = await asyncio.wait_for(future, timeout=RESPONSE_TIMEOUT_SECONDS)
+        data = await asyncio.wait_for(future, timeout=response_timeout)
     except asyncio.TimeoutError:
         pending_requests.pop(correlation_id, None)
         return JSONResponse(
