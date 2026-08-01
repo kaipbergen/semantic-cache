@@ -16,7 +16,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [x] Request correlation ID returned in an X-Request-ID response header (Day 3, 2026-07-30)
 - [x] Configurable per-request timeout override via query param on /query (Day 4, 2026-08-01)
 - [x] /health deep check: verify Redis ping, FAISS index loaded, Kafka broker reachable (Day 4, 2026-08-01)
-- [ ] Optional API key auth middleware, enabled via env var
+- [x] Optional API key auth middleware, enabled via env var (Day 4, 2026-08-01)
 - [x] Consistent structured JSON error schema for all HTTPException responses (Day 3, 2026-07-30)
 - [ ] OPTIONS/CORS preflight support for browser-based clients
 - [ ] Query parameter to bypass cache lookup and force a fresh LLM call (?bypass_cache=true)

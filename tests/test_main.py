@@ -174,6 +174,44 @@ def test_health_deep_reports_unhealthy_when_redis_ping_fails(api_client, monkeyp
     assert body["checks"]["redis"] is False
 
 
+def test_api_key_not_required_when_unset(api_client):
+    response = api_client.get("/health")
+    assert response.status_code == 200
+
+
+def test_api_key_rejects_missing_key_when_configured(api_client, monkeypatch):
+    import app.main as main_module
+
+    monkeypatch.setattr(main_module, "API_KEY", "secret123")
+    response = api_client.get("/stats")
+    assert response.status_code == 401
+    assert response.json() == {"error": {"code": 401, "message": "Invalid or missing API key"}}
+
+
+def test_api_key_rejects_wrong_key_when_configured(api_client, monkeypatch):
+    import app.main as main_module
+
+    monkeypatch.setattr(main_module, "API_KEY", "secret123")
+    response = api_client.get("/stats", headers={"X-API-Key": "wrong"})
+    assert response.status_code == 401
+
+
+def test_api_key_allows_correct_key_when_configured(api_client, monkeypatch):
+    import app.main as main_module
+
+    monkeypatch.setattr(main_module, "API_KEY", "secret123")
+    response = api_client.get("/stats", headers={"X-API-Key": "secret123"})
+    assert response.status_code == 200
+
+
+def test_api_key_exempts_health_endpoint_even_when_configured(api_client, monkeypatch):
+    import app.main as main_module
+
+    monkeypatch.setattr(main_module, "API_KEY", "secret123")
+    response = api_client.get("/health")
+    assert response.status_code == 200
+
+
 def test_rate_limit_is_tracked_per_client_ip(monkeypatch):
     import app.main as main_module
 

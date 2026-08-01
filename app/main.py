@@ -25,6 +25,8 @@ MAX_PROMPT_LENGTH = int(os.getenv("MAX_PROMPT_LENGTH", 4096))
 RATE_LIMIT_CAPACITY = float(os.getenv("RATE_LIMIT_CAPACITY", 20))
 RATE_LIMIT_REFILL_PER_SECOND = float(os.getenv("RATE_LIMIT_REFILL_PER_SECOND", 5))
 MAX_TIMEOUT_OVERRIDE_SECONDS = float(os.getenv("MAX_TIMEOUT_OVERRIDE_SECONDS", 60))
+API_KEY = os.getenv("API_KEY")
+API_KEY_EXEMPT_PATHS = {"/health", "/health/deep", "/docs", "/openapi.json", "/redoc"}
 
 
 class TokenBucket:
@@ -111,6 +113,18 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class APIKeyMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if API_KEY and request.url.path not in API_KEY_EXEMPT_PATHS:
+            if request.headers.get("X-API-Key") != API_KEY:
+                return JSONResponse(
+                    status_code=401,
+                    content={"error": {"code": 401, "message": "Invalid or missing API key"}},
+                )
+        return await call_next(request)
+
+
+app.add_middleware(APIKeyMiddleware)
 app.add_middleware(RequestIDMiddleware)
 
 
