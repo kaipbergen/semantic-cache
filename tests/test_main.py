@@ -212,6 +212,38 @@ def test_api_key_exempts_health_endpoint_even_when_configured(api_client, monkey
     assert response.status_code == 200
 
 
+def test_cors_preflight_request_is_allowed(api_client):
+    response = api_client.options(
+        "/query",
+        headers={
+            "Origin": "https://example.com",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "*"
+
+
+def test_cors_headers_present_on_actual_response(api_client):
+    response = api_client.get("/health", headers={"Origin": "https://example.com"})
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "*"
+
+
+def test_cors_allowed_origins_env_var_is_parsed_into_a_list(monkeypatch):
+    monkeypatch.setenv("CORS_ALLOWED_ORIGINS", "https://a.com, https://b.com")
+    import importlib
+
+    import app.main as main_module
+
+    importlib.reload(main_module)
+    try:
+        assert main_module.CORS_ALLOWED_ORIGINS == ["https://a.com", "https://b.com"]
+    finally:
+        monkeypatch.delenv("CORS_ALLOWED_ORIGINS", raising=False)
+        importlib.reload(main_module)
+
+
 def test_rate_limit_is_tracked_per_client_ip(monkeypatch):
     import app.main as main_module
 
