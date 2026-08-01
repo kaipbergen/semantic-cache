@@ -149,6 +149,31 @@ def test_query_honors_timeout_override_on_cache_miss(api_client):
     assert elapsed < 1.0
 
 
+def test_health_deep_reports_healthy_when_all_checks_pass(api_client):
+    response = api_client.get("/health/deep")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ok"
+    assert body["checks"]["redis"] is True
+    assert body["checks"]["faiss_index"] is True
+    assert body["checks"]["kafka"] is True
+
+
+def test_health_deep_reports_unhealthy_when_redis_ping_fails(api_client, monkeypatch):
+    import app.main as main_module
+
+    def failing_ping():
+        raise ConnectionError("redis down")
+
+    monkeypatch.setattr(main_module.redis_client, "ping", failing_ping)
+
+    response = api_client.get("/health/deep")
+    assert response.status_code == 503
+    body = response.json()
+    assert body["status"] == "unhealthy"
+    assert body["checks"]["redis"] is False
+
+
 def test_rate_limit_is_tracked_per_client_ip(monkeypatch):
     import app.main as main_module
 

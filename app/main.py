@@ -141,6 +141,36 @@ def health():
     return {"status": "ok"}
 
 
+@app.get("/health/deep")
+async def health_deep():
+    from app.cache import index
+
+    checks = {}
+
+    try:
+        checks["redis"] = bool(redis_client.ping())
+    except Exception as exc:
+        checks["redis"] = False
+        checks["redis_error"] = str(exc)
+
+    checks["faiss_index"] = index is not None
+
+    checks["kafka"] = False
+    if producer is not None:
+        try:
+            node_id = producer.client.get_random_node()
+            checks["kafka"] = node_id is not None and await producer.client.ready(node_id)
+        except Exception as exc:
+            checks["kafka_error"] = str(exc)
+
+    healthy = checks["redis"] and checks["faiss_index"] and checks["kafka"]
+    status_code = 200 if healthy else 503
+    return JSONResponse(
+        status_code=status_code,
+        content={"status": "ok" if healthy else "unhealthy", "checks": checks},
+    )
+
+
 @app.post("/query", response_model=PromptResponse)
 async def query(request: PromptRequest, http_request: Request, timeout: float | None = None):
     client_ip = http_request.client.host if http_request.client else "unknown"

@@ -76,6 +76,9 @@ class FakeRedis:
         self._store.clear()
         self._ttl.clear()
 
+    def ping(self):
+        return True
+
 
 @pytest.fixture
 def isolated_cache(monkeypatch):
@@ -102,9 +105,18 @@ def isolated_cache(monkeypatch):
     return fake_redis
 
 
+class FakeKafkaClient:
+    def get_random_node(self):
+        return 0
+
+    async def ready(self, node_id, *, group=0):
+        return True
+
+
 class FakeProducer:
     def __init__(self, *args, **kwargs):
         self.sent = []
+        self.client = FakeKafkaClient()
 
     async def start(self):
         pass
