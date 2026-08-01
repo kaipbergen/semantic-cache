@@ -196,7 +196,12 @@ async def health_deep():
 
 
 @app.post("/query", response_model=PromptResponse)
-async def query(request: PromptRequest, http_request: Request, timeout: float | None = None):
+async def query(
+    request: PromptRequest,
+    http_request: Request,
+    timeout: float | None = None,
+    bypass_cache: bool = False,
+):
     client_ip = http_request.client.host if http_request.client else "unknown"
     check_rate_limit(client_ip)
 
@@ -216,7 +221,7 @@ async def query(request: PromptRequest, http_request: Request, timeout: float | 
 
     start = time.time()
 
-    cached_response, similarity = search_cache(request.prompt)
+    cached_response, similarity = (None, None) if bypass_cache else search_cache(request.prompt)
 
     if cached_response:
         latency = (time.time() - start) * 1000

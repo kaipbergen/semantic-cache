@@ -19,7 +19,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [x] Optional API key auth middleware, enabled via env var (Day 4, 2026-08-01)
 - [x] Consistent structured JSON error schema for all HTTPException responses (Day 3, 2026-07-30)
 - [x] OPTIONS/CORS preflight support for browser-based clients (Day 4, 2026-08-01)
-- [ ] Query parameter to bypass cache lookup and force a fresh LLM call (?bypass_cache=true)
+- [x] Query parameter to bypass cache lookup and force a fresh LLM call (?bypass_cache=true) (Day 4, 2026-08-01)
 
 ## Cache core
 - [x] Sliding TTL: refresh a cache entry's expiration on hit (Day 3, 2026-07-30)

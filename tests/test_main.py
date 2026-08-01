@@ -244,6 +244,34 @@ def test_cors_allowed_origins_env_var_is_parsed_into_a_list(monkeypatch):
         importlib.reload(main_module)
 
 
+def test_bypass_cache_skips_hit_and_falls_through_to_llm_path(api_client, monkeypatch):
+    import app.main as main_module
+
+    monkeypatch.setattr(main_module, "RESPONSE_TIMEOUT_SECONDS", 0.05)
+    api_client.post(
+        "/cache/seed", json={"prompt": "What is the capital of France?", "response": "Paris"}
+    )
+
+    response = api_client.post(
+        "/query", json={"prompt": "What is the capital of France?"}, params={"bypass_cache": "true"}
+    )
+    assert response.status_code == 202
+    body = response.json()
+    assert body["cached"] is False
+
+
+def test_bypass_cache_false_still_returns_cache_hit(api_client):
+    api_client.post(
+        "/cache/seed", json={"prompt": "What is the capital of France?", "response": "Paris"}
+    )
+
+    response = api_client.post(
+        "/query", json={"prompt": "What is the capital of France?"}, params={"bypass_cache": "false"}
+    )
+    assert response.status_code == 200
+    assert response.json()["cached"] is True
+
+
 def test_rate_limit_is_tracked_per_client_ip(monkeypatch):
     import app.main as main_module
 
