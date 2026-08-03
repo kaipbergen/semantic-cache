@@ -19,11 +19,12 @@ INDEX_PATH = os.path.join(INDEX_DIR, "index.faiss")
 STORE_PATH = os.path.join(INDEX_DIR, "prompt_store.pkl")
 
 BI_ENCODER_MODEL = os.getenv("BI_ENCODER_MODEL", "multi-qa-mpnet-base-dot-v1")
+CROSS_ENCODER_MODEL = os.getenv("CROSS_ENCODER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
 
 # Bi-encoder for fast retrieval
 embedder = SentenceTransformer(BI_ENCODER_MODEL)
 # Cross-encoder for precise reranking
-reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+reranker = CrossEncoder(CROSS_ENCODER_MODEL)
 
 redis_client = redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379"))
 

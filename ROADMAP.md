@@ -33,7 +33,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [ ] Adaptive threshold auto-tuning based on observed hit/miss outcomes
 - [ ] Cache entry versioning to support safely swapping embedding models without stale vectors
 - [ ] Response compression for large cached payloads stored in Redis
-- [ ] Configurable cross-encoder model name via env var
+- [x] Configurable cross-encoder model name via env var (Day 5, 2026-08-03)
 
 ## Index management
 - [x] Atomic FAISS index persistence: write to temp file + rename instead of in-place overwrite (Day 3, 2026-07-30)

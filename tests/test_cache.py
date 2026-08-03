@@ -142,3 +142,15 @@ def test_bi_encoder_model_env_var_overrides_default(monkeypatch):
     finally:
         monkeypatch.delenv("BI_ENCODER_MODEL", raising=False)
         importlib.reload(cache)
+
+
+def test_cross_encoder_model_env_var_overrides_default(monkeypatch):
+    monkeypatch.setenv("CROSS_ENCODER_MODEL", "some-other-reranker")
+    import importlib
+
+    importlib.reload(cache)
+    try:
+        assert cache.CROSS_ENCODER_MODEL == "some-other-reranker"
+    finally:
+        monkeypatch.delenv("CROSS_ENCODER_MODEL", raising=False)
+        importlib.reload(cache)
