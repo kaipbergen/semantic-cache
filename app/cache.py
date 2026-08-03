@@ -18,8 +18,10 @@ INDEX_DIR = os.getenv("INDEX_DIR", "/app/faiss_index")
 INDEX_PATH = os.path.join(INDEX_DIR, "index.faiss")
 STORE_PATH = os.path.join(INDEX_DIR, "prompt_store.pkl")
 
+BI_ENCODER_MODEL = os.getenv("BI_ENCODER_MODEL", "multi-qa-mpnet-base-dot-v1")
+
 # Bi-encoder for fast retrieval
-embedder = SentenceTransformer("multi-qa-mpnet-base-dot-v1")
+embedder = SentenceTransformer(BI_ENCODER_MODEL)
 # Cross-encoder for precise reranking
 reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
 

@@ -130,3 +130,15 @@ def test_isolated_cache_state_does_not_leak_between_tests(isolated_cache):
     assert cache.index.ntotal == 0
     assert cache.prompt_store == []
     assert cache.stats["total_requests"] == 0
+
+
+def test_bi_encoder_model_env_var_overrides_default(monkeypatch):
+    monkeypatch.setenv("BI_ENCODER_MODEL", "some-other-model")
+    import importlib
+
+    importlib.reload(cache)
+    try:
+        assert cache.BI_ENCODER_MODEL == "some-other-model"
+    finally:
+        monkeypatch.delenv("BI_ENCODER_MODEL", raising=False)
+        importlib.reload(cache)

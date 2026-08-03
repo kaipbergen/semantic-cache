@@ -28,7 +28,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [ ] Prompt normalization: strip emoji/non-ASCII punctuation consistently
 - [x] Duplicate-prompt guard in store_cache to avoid re-adding an existing prompt to the index (Day 3, 2026-07-30)
 - [ ] Per-namespace cache isolation via an optional namespace field on requests
-- [ ] Configurable bi-encoder model name via env var
+- [x] Configurable bi-encoder model name via env var (Day 5, 2026-08-03)
 - [ ] Cache warmup script: preload FAISS index + Redis from a JSONL file of prompt/response pairs
 - [ ] Adaptive threshold auto-tuning based on observed hit/miss outcomes
 - [ ] Cache entry versioning to support safely swapping embedding models without stale vectors
