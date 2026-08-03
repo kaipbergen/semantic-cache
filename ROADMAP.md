@@ -25,7 +25,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [x] Sliding TTL: refresh a cache entry's expiration on hit (Day 3, 2026-07-30)
 - [ ] Configurable max cache size with LRU eviction of oldest FAISS/prompt_store entries
 - [ ] POST /query/batch for looking up multiple prompts in one call
-- [ ] Prompt normalization: strip emoji/non-ASCII punctuation consistently
+- [x] Prompt normalization: strip emoji/non-ASCII punctuation consistently (Day 5, 2026-08-03)
 - [x] Duplicate-prompt guard in store_cache to avoid re-adding an existing prompt to the index (Day 3, 2026-07-30)
 - [ ] Per-namespace cache isolation via an optional namespace field on requests
 - [x] Configurable bi-encoder model name via env var (Day 5, 2026-08-03)

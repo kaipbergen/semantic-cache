@@ -61,10 +61,26 @@ def _save_index(idx, store):
 
 index, prompt_store = _load_index()
 
+# Emoji and other pictographic symbols are stripped as whole runs and replaced
+# with a space (rather than deleted like regular punctuation below), so
+# "hello👍world" normalizes to "hello world" instead of gluing the
+# surrounding words together.
+_EMOJI_RE = re.compile(
+    "["
+    "\U0001F1E6-\U0001F1FF"
+    "\U0001F300-\U0001FAFF"
+    "\U00002600-\U000027BF"
+    "\U00002B00-\U00002BFF"
+    "\U0000FE0F"
+    "\U0000200D"
+    "]+"
+)
+
 def normalize_query(text: str) -> str:
     text = text.lower().strip()
+    text = _EMOJI_RE.sub(' ', text)
     text = re.sub(r'[^\w\s]', '', text)
-    text = re.sub(r'\s+', ' ', text)
+    text = re.sub(r'\s+', ' ', text).strip()
     return text
 
 def get_embedding(text: str) -> np.ndarray:

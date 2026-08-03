@@ -79,6 +79,26 @@ def test_normalize_query_only_punctuation_becomes_empty():
     assert normalize_query("???!!!") == ""
 
 
+def test_normalize_query_strips_emoji_without_gluing_adjacent_words():
+    assert normalize_query("hello👍world") == "hello world"
+
+
+def test_normalize_query_strips_emoji_surrounded_by_spaces():
+    assert normalize_query("I love pizza 🍕🍕🍕 so much!!!") == "i love pizza so much"
+
+
+def test_normalize_query_strips_zwj_skin_tone_emoji_sequences():
+    assert normalize_query("family 👨‍👩‍👧‍👦 emoji") == "family emoji"
+
+
+def test_normalize_query_strips_non_ascii_punctuation():
+    assert normalize_query("curly “quotes” and «guillemets»") == "curly quotes and guillemets"
+
+
+def test_normalize_query_keeps_non_ascii_letters():
+    assert normalize_query("café naïve") == "café naïve"
+
+
 def test_isolated_cache_round_trip(isolated_cache):
     assert cache.index.ntotal == 0
     cache.store_cache("What is the capital of France?", "Paris")
