@@ -272,6 +272,31 @@ def test_bypass_cache_false_still_returns_cache_hit(api_client):
     assert response.json()["cached"] is True
 
 
+def test_clear_cache_resets_index_and_redis_together(api_client, monkeypatch):
+    import app.main as main_module
+
+    api_client.post("/cache/seed", json={"prompt": "What is the capital of France?", "response": "Paris"})
+    api_client.post("/cache/seed", json={"prompt": "Explain gravity", "response": "It pulls things down"})
+
+    entries_before = api_client.get("/cache/entries").json()
+    assert entries_before["total"] == 2
+
+    response = api_client.delete("/cache")
+    assert response.status_code == 200
+    assert response.json() == {"message": "Cache cleared", "deleted": "all"}
+
+    entries_after = api_client.get("/cache/entries").json()
+    assert entries_after["total"] == 0
+
+    stats_after = api_client.get("/stats").json()
+    assert stats_after["total_cached_prompts"] == 0
+
+    monkeypatch.setattr(main_module, "RESPONSE_TIMEOUT_SECONDS", 0.05)
+    query_response = api_client.post("/query", json={"prompt": "What is the capital of France?"})
+    assert query_response.status_code == 202
+    assert query_response.json()["cached"] is False
+
+
 def test_rate_limit_is_tracked_per_client_ip(monkeypatch):
     import app.main as main_module
 

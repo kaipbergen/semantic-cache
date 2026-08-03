@@ -56,7 +56,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [ ] Integration test: cache miss path with a mocked Kafka producer/consumer
 - [ ] Integration test: /status/{job_id} polling fallback on timeout
 - [ ] Test coverage reporting via pytest-cov
-- [ ] Regression test for clear_cache endpoint resetting index + Redis together
+- [x] Regression test for clear_cache endpoint resetting index + Redis together (Day 5, 2026-08-03)
 - [ ] Load test script (locust or asyncio-based) exercising /query concurrently
 - [ ] Contract test verifying PromptResponse schema stability
 - [ ] CI job matrix testing against two Python versions
