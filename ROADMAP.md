@@ -45,7 +45,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [x] Configurable index storage path via env var (currently hardcoded /app path) (Day 1, 2026-07-25)
 - [ ] Export cache contents to JSONL for inspection/debugging
 - [ ] CLI script to rebuild the FAISS index from Redis contents alone (disaster recovery)
-- [ ] Metrics on index size/memory footprint exposed via /stats
+- [x] Metrics on index size/memory footprint exposed via /stats (Day 5, 2026-08-03)
 
 ## Testing
 - [x] pytest fixtures providing isolated Redis + FAISS state per test (Day 1, 2026-07-25)

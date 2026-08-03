@@ -186,4 +186,6 @@ def get_stats() -> dict:
         "latency_reduction_percent": round(latency_reduction, 1),
         "estimated_cost_savings_percent": round(hit_rate, 1),
         "total_cached_prompts": index.ntotal,
+        "index_dimension": dimension,
+        "index_vectors_bytes": index.ntotal * dimension * 4,
     }

@@ -146,6 +146,22 @@ def test_save_index_writes_via_temp_file_and_rename(tmp_path, monkeypatch):
     assert loaded_idx.ntotal == 0
 
 
+def test_get_stats_reports_index_size_and_dimension(isolated_cache):
+    cache.store_cache("What is the capital of France?", "Paris")
+    cache.store_cache("Who invented the telephone?", "Alexander Graham Bell")
+
+    stats = cache.get_stats()
+
+    assert stats["index_dimension"] == cache.dimension
+    assert stats["total_cached_prompts"] == 2
+    assert stats["index_vectors_bytes"] == 2 * cache.dimension * 4
+
+
+def test_get_stats_reports_zero_index_bytes_when_empty(isolated_cache):
+    stats = cache.get_stats()
+    assert stats["index_vectors_bytes"] == 0
+
+
 def test_isolated_cache_state_does_not_leak_between_tests(isolated_cache):
     assert cache.index.ntotal == 0
     assert cache.prompt_store == []
