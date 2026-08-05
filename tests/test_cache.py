@@ -180,6 +180,41 @@ def test_bi_encoder_model_env_var_overrides_default(monkeypatch):
         importlib.reload(cache)
 
 
+def test_store_cache_evicts_oldest_entry_when_over_max_cache_size(isolated_cache, monkeypatch):
+    monkeypatch.setattr(cache, "MAX_CACHE_SIZE", 2)
+
+    cache.store_cache("prompt one", "response one")
+    cache.store_cache("prompt two", "response two")
+    cache.store_cache("prompt three", "response three")
+
+    assert cache.index.ntotal == 2
+    assert cache.prompt_store == ["prompt two", "prompt three"]
+    assert isolated_cache.get("prompt one") is None
+
+    result, _ = cache.search_cache("prompt one")
+    assert result is None
+
+    result, _ = cache.search_cache("prompt three")
+    assert result == "response three"
+
+
+def test_store_cache_evicts_multiple_entries_when_far_over_max_cache_size(isolated_cache, monkeypatch):
+    monkeypatch.setattr(cache, "MAX_CACHE_SIZE", 1)
+
+    cache.store_cache("prompt one", "response one")
+    cache.store_cache("prompt two", "response two")
+
+    assert cache.index.ntotal == 1
+    assert cache.prompt_store == ["prompt two"]
+
+
+def test_store_cache_does_not_evict_when_max_cache_size_unset(isolated_cache):
+    assert cache.MAX_CACHE_SIZE == 0
+    for i in range(10):
+        cache.store_cache(f"prompt {i}", f"response {i}")
+    assert cache.index.ntotal == 10
+
+
 def test_cross_encoder_model_env_var_overrides_default(monkeypatch):
     monkeypatch.setenv("CROSS_ENCODER_MODEL", "some-other-reranker")
     import importlib

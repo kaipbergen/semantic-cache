@@ -14,6 +14,7 @@ SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", 0.85))
 CROSS_ENCODER_THRESHOLD = float(os.getenv("CROSS_ENCODER_THRESHOLD", 0.5))
 CACHE_TTL_SHORT = int(os.getenv("CACHE_TTL_SHORT", 3600))
 CACHE_TTL_LONG = int(os.getenv("CACHE_TTL_LONG", 86400))
+MAX_CACHE_SIZE = int(os.getenv("MAX_CACHE_SIZE", 0))
 INDEX_DIR = os.getenv("INDEX_DIR", "/app/faiss_index")
 INDEX_PATH = os.path.join(INDEX_DIR, "index.faiss")
 STORE_PATH = os.path.join(INDEX_DIR, "prompt_store.pkl")
@@ -154,6 +155,19 @@ def search_cache(prompt: str):
     stats["cache_misses"] += 1
     return None, float(distances[0][0])
 
+def _evict_oldest(count: int):
+    """Evict the `count` oldest entries. Insertion order is preserved as
+    position 0..ntotal-1 in both `index` and `prompt_store`, and removing a
+    prefix range keeps that correspondence intact (remaining entries shift
+    down uniformly in both structures)."""
+    if count <= 0:
+        return
+    index.remove_ids(faiss.IDSelectorRange(0, count))
+    evicted = prompt_store[:count]
+    del prompt_store[:count]
+    for evicted_prompt in evicted:
+        redis_client.delete(evicted_prompt)
+
 def store_cache(prompt: str, response: str):
     ttl = get_ttl(prompt)
     if prompt in prompt_store:
@@ -163,6 +177,8 @@ def store_cache(prompt: str, response: str):
     index.add(emb)
     prompt_store.append(prompt)
     redis_client.setex(prompt, ttl, json.dumps(response))
+    if MAX_CACHE_SIZE > 0 and len(prompt_store) > MAX_CACHE_SIZE:
+        _evict_oldest(len(prompt_store) - MAX_CACHE_SIZE)
     _save_index(index, prompt_store)
 
 def get_stats() -> dict:
