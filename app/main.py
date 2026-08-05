@@ -26,6 +26,7 @@ MAX_PROMPT_LENGTH = int(os.getenv("MAX_PROMPT_LENGTH", 4096))
 RATE_LIMIT_CAPACITY = float(os.getenv("RATE_LIMIT_CAPACITY", 20))
 RATE_LIMIT_REFILL_PER_SECOND = float(os.getenv("RATE_LIMIT_REFILL_PER_SECOND", 5))
 MAX_TIMEOUT_OVERRIDE_SECONDS = float(os.getenv("MAX_TIMEOUT_OVERRIDE_SECONDS", 60))
+MAX_BATCH_SIZE = int(os.getenv("MAX_BATCH_SIZE", 50))
 API_KEY = os.getenv("API_KEY")
 API_KEY_EXEMPT_PATHS = {"/health", "/health/deep", "/docs", "/openapi.json", "/redoc"}
 CORS_ALLOWED_ORIGINS = [
@@ -272,6 +273,43 @@ async def query(
         similarity=round(float(similarity), 3) if similarity else None,
         latency_ms=round(latency, 2),
     )
+
+
+class BatchQueryRequest(BaseModel):
+    prompts: list[str]
+
+
+class BatchQueryResult(BaseModel):
+    prompt: str
+    cached: bool
+    response: str | None = None
+    similarity: float | None = None
+
+
+@app.post("/query/batch", response_model=list[BatchQueryResult])
+def query_batch(request: BatchQueryRequest):
+    if not request.prompts:
+        raise HTTPException(status_code=400, detail="prompts must not be empty")
+    if len(request.prompts) > MAX_BATCH_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail=f"prompts exceeds max batch size of {MAX_BATCH_SIZE}",
+        )
+
+    results = []
+    for prompt in request.prompts:
+        if not prompt.strip():
+            raise HTTPException(status_code=400, detail="prompt must not be empty")
+        cached_response, similarity = search_cache(prompt)
+        results.append(
+            BatchQueryResult(
+                prompt=prompt,
+                cached=cached_response is not None,
+                response=cached_response,
+                similarity=round(float(similarity), 3) if similarity is not None else None,
+            )
+        )
+    return results
 
 
 class SeedRequest(BaseModel):

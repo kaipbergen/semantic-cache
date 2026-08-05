@@ -297,6 +297,44 @@ def test_clear_cache_resets_index_and_redis_together(api_client, monkeypatch):
     assert query_response.json()["cached"] is False
 
 
+def test_query_batch_returns_hit_and_miss_results(api_client):
+    api_client.post(
+        "/cache/seed", json={"prompt": "What is the capital of France?", "response": "Paris"}
+    )
+
+    response = api_client.post(
+        "/query/batch",
+        json={"prompts": ["What is the capital of France?", "completely unrelated text xyz"]},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 2
+    assert body[0]["prompt"] == "What is the capital of France?"
+    assert body[0]["cached"] is True
+    assert body[0]["response"] == "Paris"
+    assert body[1]["prompt"] == "completely unrelated text xyz"
+    assert body[1]["cached"] is False
+    assert body[1]["response"] is None
+
+
+def test_query_batch_rejects_empty_prompt_list(api_client):
+    response = api_client.post("/query/batch", json={"prompts": []})
+    assert response.status_code == 400
+
+
+def test_query_batch_rejects_blank_prompt_in_list(api_client):
+    response = api_client.post("/query/batch", json={"prompts": ["valid", "   "]})
+    assert response.status_code == 400
+
+
+def test_query_batch_rejects_over_max_batch_size(api_client, monkeypatch):
+    import app.main as main_module
+
+    monkeypatch.setattr(main_module, "MAX_BATCH_SIZE", 2)
+    response = api_client.post("/query/batch", json={"prompts": ["a", "b", "c"]})
+    assert response.status_code == 413
+
+
 def test_rate_limit_is_tracked_per_client_ip(monkeypatch):
     import app.main as main_module
 
