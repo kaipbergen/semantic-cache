@@ -1,6 +1,7 @@
 import os
 
 import faiss
+import numpy as np
 
 import app.cache as cache
 from app.cache import CACHE_TTL_LONG, CACHE_TTL_SHORT, get_adaptive_threshold, get_ttl, normalize_query
@@ -213,6 +214,71 @@ def test_store_cache_does_not_evict_when_max_cache_size_unset(isolated_cache):
     for i in range(10):
         cache.store_cache(f"prompt {i}", f"response {i}")
     assert cache.index.ntotal == 10
+
+
+def test_save_index_persists_bi_encoder_model_metadata(tmp_path, monkeypatch):
+    monkeypatch.setattr(cache, "INDEX_PATH", str(tmp_path / "index.faiss"))
+    monkeypatch.setattr(cache, "STORE_PATH", str(tmp_path / "prompt_store.pkl"))
+    monkeypatch.setattr(cache, "INDEX_METADATA_PATH", str(tmp_path / "index_metadata.json"))
+
+    cache._save_index(faiss.IndexFlatIP(cache.dimension), ["hello"])
+
+    import json
+
+    with open(tmp_path / "index_metadata.json") as f:
+        metadata = json.load(f)
+    assert metadata["bi_encoder_model"] == cache.BI_ENCODER_MODEL
+
+
+def test_load_index_discards_stale_index_when_bi_encoder_model_changed(tmp_path, monkeypatch):
+    monkeypatch.setattr(cache, "INDEX_PATH", str(tmp_path / "index.faiss"))
+    monkeypatch.setattr(cache, "STORE_PATH", str(tmp_path / "prompt_store.pkl"))
+    monkeypatch.setattr(cache, "INDEX_METADATA_PATH", str(tmp_path / "index_metadata.json"))
+
+    idx = faiss.IndexFlatIP(cache.dimension)
+    idx.add(np.ones((1, cache.dimension), dtype="float32"))
+    cache._save_index(idx, ["hello"])
+
+    monkeypatch.setattr(cache, "BI_ENCODER_MODEL", "a-different-bi-encoder-model")
+    loaded_idx, loaded_store = cache._load_index()
+
+    assert loaded_idx.ntotal == 0
+    assert loaded_store == []
+
+
+def test_load_index_keeps_index_when_bi_encoder_model_unchanged(tmp_path, monkeypatch):
+    monkeypatch.setattr(cache, "INDEX_PATH", str(tmp_path / "index.faiss"))
+    monkeypatch.setattr(cache, "STORE_PATH", str(tmp_path / "prompt_store.pkl"))
+    monkeypatch.setattr(cache, "INDEX_METADATA_PATH", str(tmp_path / "index_metadata.json"))
+
+    idx = faiss.IndexFlatIP(cache.dimension)
+    idx.add(np.ones((1, cache.dimension), dtype="float32"))
+    cache._save_index(idx, ["hello"])
+
+    loaded_idx, loaded_store = cache._load_index()
+
+    assert loaded_idx.ntotal == 1
+    assert loaded_store == ["hello"]
+
+
+def test_load_index_with_no_metadata_file_loads_normally(tmp_path, monkeypatch):
+    # Indexes persisted before this metadata file existed should still load.
+    monkeypatch.setattr(cache, "INDEX_PATH", str(tmp_path / "index.faiss"))
+    monkeypatch.setattr(cache, "STORE_PATH", str(tmp_path / "prompt_store.pkl"))
+    monkeypatch.setattr(cache, "INDEX_METADATA_PATH", str(tmp_path / "index_metadata.json"))
+
+    idx = faiss.IndexFlatIP(cache.dimension)
+    idx.add(np.ones((1, cache.dimension), dtype="float32"))
+    faiss.write_index(idx, str(tmp_path / "index.faiss"))
+    import pickle
+
+    with open(tmp_path / "prompt_store.pkl", "wb") as f:
+        pickle.dump(["hello"], f)
+
+    loaded_idx, loaded_store = cache._load_index()
+
+    assert loaded_idx.ntotal == 1
+    assert loaded_store == ["hello"]
 
 
 def test_cross_encoder_model_env_var_overrides_default(monkeypatch):

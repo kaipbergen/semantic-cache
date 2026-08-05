@@ -31,7 +31,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [x] Configurable bi-encoder model name via env var (Day 5, 2026-08-03)
 - [x] Cache warmup script: preload FAISS index + Redis from a JSONL file of prompt/response pairs (Day 6, 2026-08-05)
 - [ ] Adaptive threshold auto-tuning based on observed hit/miss outcomes
-- [ ] Cache entry versioning to support safely swapping embedding models without stale vectors
+- [x] Cache entry versioning to support safely swapping embedding models without stale vectors (Day 6, 2026-08-05)
 - [ ] Response compression for large cached payloads stored in Redis
 - [x] Configurable cross-encoder model name via env var (Day 5, 2026-08-03)
 
@@ -135,3 +135,12 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
   delete_cache_entry, and the new max-cache-size eviction), which is too
   large to land safely as a single scoped item alongside other changes in
   one run. Left unchecked for a future run with more headroom.
+- Day 6 (2026-08-05): Skipped "Adaptive threshold auto-tuning based on
+  observed hit/miss outcomes" — the system has no ground-truth signal for
+  whether a cache hit was actually a correct/relevant answer (no user
+  feedback loop exists), so there's no real "observed outcome" to tune
+  against yet. Needs a feedback mechanism first; left unchecked.
+  "Cache entry versioning" was implemented as index-level versioning
+  (persisted bi_encoder_model tag, stale index discarded on mismatch)
+  rather than true per-entry versioning, which covers the stated goal
+  (avoid stale vectors after swapping embedding models) more simply.

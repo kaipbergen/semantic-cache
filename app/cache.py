@@ -18,6 +18,7 @@ MAX_CACHE_SIZE = int(os.getenv("MAX_CACHE_SIZE", 0))
 INDEX_DIR = os.getenv("INDEX_DIR", "/app/faiss_index")
 INDEX_PATH = os.path.join(INDEX_DIR, "index.faiss")
 STORE_PATH = os.path.join(INDEX_DIR, "prompt_store.pkl")
+INDEX_METADATA_PATH = os.path.join(INDEX_DIR, "index_metadata.json")
 
 BI_ENCODER_MODEL = os.getenv("BI_ENCODER_MODEL", "multi-qa-mpnet-base-dot-v1")
 CROSS_ENCODER_MODEL = os.getenv("CROSS_ENCODER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
@@ -41,6 +42,20 @@ stats = {
 def _load_index():
     os.makedirs(os.path.dirname(INDEX_PATH), exist_ok=True)
     if os.path.exists(INDEX_PATH) and os.path.exists(STORE_PATH):
+        stored_model = None
+        if os.path.exists(INDEX_METADATA_PATH):
+            with open(INDEX_METADATA_PATH) as f:
+                stored_model = json.load(f).get("bi_encoder_model")
+        if stored_model is not None and stored_model != BI_ENCODER_MODEL:
+            # Vectors on disk were produced by a different bi-encoder and are
+            # not comparable to embeddings from the current one (different
+            # geometry, possibly different dimension) - start fresh rather
+            # than serving similarity scores computed against stale vectors.
+            print(
+                f"Index was built with bi-encoder '{stored_model}', current is "
+                f"'{BI_ENCODER_MODEL}' - discarding stale index"
+            )
+            return faiss.IndexFlatIP(dimension), []
         idx = faiss.read_index(INDEX_PATH)
         with open(STORE_PATH, "rb") as f:
             store = pickle.load(f)
@@ -59,6 +74,11 @@ def _save_index(idx, store):
     with open(store_tmp_path, "wb") as f:
         pickle.dump(store, f)
     os.replace(store_tmp_path, STORE_PATH)
+
+    metadata_tmp_path = INDEX_METADATA_PATH + ".tmp"
+    with open(metadata_tmp_path, "w") as f:
+        json.dump({"bi_encoder_model": BI_ENCODER_MODEL}, f)
+    os.replace(metadata_tmp_path, INDEX_METADATA_PATH)
 
 index, prompt_store = _load_index()
 
