@@ -32,7 +32,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [x] Cache warmup script: preload FAISS index + Redis from a JSONL file of prompt/response pairs (Day 6, 2026-08-05)
 - [ ] Adaptive threshold auto-tuning based on observed hit/miss outcomes
 - [x] Cache entry versioning to support safely swapping embedding models without stale vectors (Day 6, 2026-08-05)
-- [ ] Response compression for large cached payloads stored in Redis
+- [x] Response compression for large cached payloads stored in Redis (Day 6, 2026-08-05)
 - [x] Configurable cross-encoder model name via env var (Day 5, 2026-08-03)
 
 ## Index management

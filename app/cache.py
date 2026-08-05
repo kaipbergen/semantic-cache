@@ -1,6 +1,7 @@
 import faiss
 import numpy as np
 import redis
+import gzip
 import json
 import os
 import re
@@ -15,6 +16,7 @@ CROSS_ENCODER_THRESHOLD = float(os.getenv("CROSS_ENCODER_THRESHOLD", 0.5))
 CACHE_TTL_SHORT = int(os.getenv("CACHE_TTL_SHORT", 3600))
 CACHE_TTL_LONG = int(os.getenv("CACHE_TTL_LONG", 86400))
 MAX_CACHE_SIZE = int(os.getenv("MAX_CACHE_SIZE", 0))
+COMPRESSION_THRESHOLD_BYTES = int(os.getenv("COMPRESSION_THRESHOLD_BYTES", 1024))
 INDEX_DIR = os.getenv("INDEX_DIR", "/app/faiss_index")
 INDEX_PATH = os.path.join(INDEX_DIR, "index.faiss")
 STORE_PATH = os.path.join(INDEX_DIR, "prompt_store.pkl")
@@ -170,10 +172,25 @@ def search_cache(prompt: str):
         if cached_response:
             redis_client.expire(best_prompt, get_ttl(best_prompt))
             stats["cache_hits"] += 1
-            return json.loads(cached_response), candidates[best_idx][1]
+            return _decode_payload(cached_response), candidates[best_idx][1]
 
     stats["cache_misses"] += 1
     return None, float(distances[0][0])
+
+_GZIP_MAGIC = b"\x1f\x8b"
+
+def _encode_payload(response) -> bytes:
+    raw = json.dumps(response).encode("utf-8")
+    if len(raw) > COMPRESSION_THRESHOLD_BYTES:
+        return gzip.compress(raw)
+    return raw
+
+def _decode_payload(raw):
+    if isinstance(raw, str):
+        raw = raw.encode("utf-8")
+    if raw[:2] == _GZIP_MAGIC:
+        raw = gzip.decompress(raw)
+    return json.loads(raw)
 
 def _evict_oldest(count: int):
     """Evict the `count` oldest entries. Insertion order is preserved as
@@ -191,12 +208,12 @@ def _evict_oldest(count: int):
 def store_cache(prompt: str, response: str):
     ttl = get_ttl(prompt)
     if prompt in prompt_store:
-        redis_client.setex(prompt, ttl, json.dumps(response))
+        redis_client.setex(prompt, ttl, _encode_payload(response))
         return
     emb = get_embedding(prompt)
     index.add(emb)
     prompt_store.append(prompt)
-    redis_client.setex(prompt, ttl, json.dumps(response))
+    redis_client.setex(prompt, ttl, _encode_payload(response))
     if MAX_CACHE_SIZE > 0 and len(prompt_store) > MAX_CACHE_SIZE:
         _evict_oldest(len(prompt_store) - MAX_CACHE_SIZE)
     _save_index(index, prompt_store)

@@ -281,6 +281,42 @@ def test_load_index_with_no_metadata_file_loads_normally(tmp_path, monkeypatch):
     assert loaded_store == ["hello"]
 
 
+def test_store_cache_keeps_small_payloads_uncompressed(isolated_cache):
+    cache.store_cache("What is the capital of France?", "Paris")
+
+    raw = isolated_cache.get("What is the capital of France?")
+    assert raw[:2] != cache._GZIP_MAGIC
+
+    result, _ = cache.search_cache("What is the capital of France?")
+    assert result == "Paris"
+
+
+def test_store_cache_compresses_large_payloads(isolated_cache, monkeypatch):
+    monkeypatch.setattr(cache, "COMPRESSION_THRESHOLD_BYTES", 100)
+    large_response = "x" * 5000
+
+    cache.store_cache("Explain a very long topic", large_response)
+
+    raw = isolated_cache.get("Explain a very long topic")
+    assert raw[:2] == cache._GZIP_MAGIC
+    assert len(raw) < len(large_response)
+
+    result, _ = cache.search_cache("Explain a very long topic")
+    assert result == large_response
+
+
+def test_compression_threshold_env_var_overrides_default(monkeypatch):
+    monkeypatch.setenv("COMPRESSION_THRESHOLD_BYTES", "2048")
+    import importlib
+
+    importlib.reload(cache)
+    try:
+        assert cache.COMPRESSION_THRESHOLD_BYTES == 2048
+    finally:
+        monkeypatch.delenv("COMPRESSION_THRESHOLD_BYTES", raising=False)
+        importlib.reload(cache)
+
+
 def test_cross_encoder_model_env_var_overrides_default(monkeypatch):
     monkeypatch.setenv("CROSS_ENCODER_MODEL", "some-other-reranker")
     import importlib
