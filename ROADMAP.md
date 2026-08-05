@@ -29,7 +29,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [x] Duplicate-prompt guard in store_cache to avoid re-adding an existing prompt to the index (Day 3, 2026-07-30)
 - [ ] Per-namespace cache isolation via an optional namespace field on requests
 - [x] Configurable bi-encoder model name via env var (Day 5, 2026-08-03)
-- [ ] Cache warmup script: preload FAISS index + Redis from a JSONL file of prompt/response pairs
+- [x] Cache warmup script: preload FAISS index + Redis from a JSONL file of prompt/response pairs (Day 6, 2026-08-05)
 - [ ] Adaptive threshold auto-tuning based on observed hit/miss outcomes
 - [ ] Cache entry versioning to support safely swapping embedding models without stale vectors
 - [ ] Response compression for large cached payloads stored in Redis
@@ -126,3 +126,12 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [ ] Thin Python client SDK wrapping the API
 - [ ] Minimal admin UI (static HTML hitting /stats and /cache endpoints)
 - [ ] Day 100: final benchmark pass + updated numbers + 100-day retrospective
+
+## Notes
+- Day 6 (2026-08-05): Skipped "Per-namespace cache isolation via an optional
+  namespace field on requests" — it requires restructuring prompt_store's
+  data model (composite namespace+prompt keys, Redis key format, and every
+  consumer of prompt_store: search_cache, list_cache_entries,
+  delete_cache_entry, and the new max-cache-size eviction), which is too
+  large to land safely as a single scoped item alongside other changes in
+  one run. Left unchecked for a future run with more headroom.
