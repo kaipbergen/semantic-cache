@@ -327,3 +327,45 @@ def test_cross_encoder_model_env_var_overrides_default(monkeypatch):
     finally:
         monkeypatch.delenv("CROSS_ENCODER_MODEL", raising=False)
         importlib.reload(cache)
+
+
+def test_compact_index_removes_expired_entries(isolated_cache):
+    cache.store_cache("prompt one", "response one")
+    cache.store_cache("prompt two", "response two")
+    cache.store_cache("prompt three", "response three")
+    isolated_cache.delete("prompt two")
+
+    removed = cache.compact_index()
+
+    assert removed == 1
+    assert cache.index.ntotal == 2
+    assert cache.prompt_store == ["prompt one", "prompt three"]
+
+    result, _ = cache.search_cache("prompt one")
+    assert result == "response one"
+    result, _ = cache.search_cache("prompt three")
+    assert result == "response three"
+
+
+def test_compact_index_removes_multiple_non_contiguous_expired_entries(isolated_cache):
+    for i in range(5):
+        cache.store_cache(f"prompt {i}", f"response {i}")
+    isolated_cache.delete("prompt 0")
+    isolated_cache.delete("prompt 2")
+    isolated_cache.delete("prompt 4")
+
+    removed = cache.compact_index()
+
+    assert removed == 3
+    assert cache.index.ntotal == 2
+    assert cache.prompt_store == ["prompt 1", "prompt 3"]
+
+
+def test_compact_index_is_noop_when_nothing_expired(isolated_cache):
+    cache.store_cache("prompt one", "response one")
+
+    removed = cache.compact_index()
+
+    assert removed == 0
+    assert cache.index.ntotal == 1
+    assert cache.prompt_store == ["prompt one"]

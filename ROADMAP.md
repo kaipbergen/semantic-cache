@@ -37,7 +37,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 
 ## Index management
 - [x] Atomic FAISS index persistence: write to temp file + rename instead of in-place overwrite (Day 3, 2026-07-30)
-- [ ] Index compaction command: rebuild the index dropping entries whose Redis TTL has expired
+- [x] Index compaction command: rebuild the index dropping entries whose Redis TTL has expired (Day 7, 2026-08-07)
 - [ ] Backup/restore CLI script for the FAISS index + prompt_store
 - [ ] Background task to periodically prune expired entries from prompt_store
 - [ ] Migration path from IndexFlatIP to IndexIVFFlat for larger-scale recall/perf tradeoff

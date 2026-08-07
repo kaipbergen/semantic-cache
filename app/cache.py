@@ -205,6 +205,18 @@ def _evict_oldest(count: int):
     for evicted_prompt in evicted:
         redis_client.delete(evicted_prompt)
 
+def compact_index() -> int:
+    """Drop entries whose Redis key has expired (TTL entry gone) from the
+    index and prompt_store, keeping both in sync. Returns count removed."""
+    expired_positions = [i for i, prompt in enumerate(prompt_store) if redis_client.ttl(prompt) == -2]
+    if not expired_positions:
+        return 0
+    index.remove_ids(faiss.IDSelectorBatch(np.array(expired_positions, dtype=np.int64)))
+    for i in reversed(expired_positions):
+        del prompt_store[i]
+    _save_index(index, prompt_store)
+    return len(expired_positions)
+
 def store_cache(prompt: str, response: str):
     ttl = get_ttl(prompt)
     if prompt in prompt_store:
