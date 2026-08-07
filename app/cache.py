@@ -61,6 +61,16 @@ def _load_index():
         idx = faiss.read_index(INDEX_PATH)
         with open(STORE_PATH, "rb") as f:
             store = pickle.load(f)
+        if idx.ntotal != len(store):
+            # A crash or partial write between the index and store files can
+            # leave their entry counts out of sync, which corrupts the
+            # positional correspondence search_cache/compact_index rely on -
+            # safer to start fresh than to serve mismatched prompts.
+            print(
+                f"Index/prompt_store size mismatch ({idx.ntotal} vs {len(store)} entries) - "
+                "discarding corrupted index"
+            )
+            return faiss.IndexFlatIP(dimension), []
         print(f"Loaded FAISS index with {idx.ntotal} entries")
         return idx, store
     return faiss.IndexFlatIP(dimension), []
