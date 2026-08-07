@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 from fastapi import HTTPException
 
@@ -348,3 +350,54 @@ def test_rate_limit_is_tracked_per_client_ip(monkeypatch):
 
     # A different client IP has its own bucket and is unaffected.
     main_module.check_rate_limit("2.2.2.2")
+
+
+def test_prune_once_removes_expired_entries(isolated_cache):
+    import app.cache as cache
+    import app.main as main_module
+
+    cache.store_cache("prompt one", "response one")
+    cache.store_cache("prompt two", "response two")
+    isolated_cache.delete("prompt one")
+
+    removed = main_module._prune_once()
+
+    assert removed == 1
+    assert cache.prompt_store == ["prompt two"]
+
+
+def test_prune_once_returns_zero_when_nothing_expired(isolated_cache):
+    import app.cache as cache
+    import app.main as main_module
+
+    cache.store_cache("prompt one", "response one")
+
+    removed = main_module._prune_once()
+
+    assert removed == 0
+    assert cache.prompt_store == ["prompt one"]
+
+
+@pytest.mark.asyncio
+async def test_prune_expired_entries_loop_prunes_on_each_tick(isolated_cache, monkeypatch):
+    import app.cache as cache
+    import app.main as main_module
+
+    cache.store_cache("prompt one", "response one")
+    isolated_cache.delete("prompt one")
+
+    sleep_calls = []
+
+    async def fake_sleep(seconds):
+        sleep_calls.append(seconds)
+        if len(sleep_calls) >= 2:
+            raise asyncio.CancelledError
+
+    monkeypatch.setattr(main_module, "COMPACTION_INTERVAL_SECONDS", 30)
+    monkeypatch.setattr(main_module.asyncio, "sleep", fake_sleep)
+
+    with pytest.raises(asyncio.CancelledError):
+        await main_module.prune_expired_entries()
+
+    assert sleep_calls == [30, 30]
+    assert cache.prompt_store == []

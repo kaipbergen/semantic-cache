@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.cache import search_cache, store_cache, get_stats, stats, redis_client
+from app.cache import compact_index, search_cache, store_cache, get_stats, stats, redis_client
 from app.kafka_client import (
     KAFKA_BOOTSTRAP_SERVERS,
     LLM_REQUESTS_TOPIC,
@@ -27,6 +27,7 @@ RATE_LIMIT_CAPACITY = float(os.getenv("RATE_LIMIT_CAPACITY", 20))
 RATE_LIMIT_REFILL_PER_SECOND = float(os.getenv("RATE_LIMIT_REFILL_PER_SECOND", 5))
 MAX_TIMEOUT_OVERRIDE_SECONDS = float(os.getenv("MAX_TIMEOUT_OVERRIDE_SECONDS", 60))
 MAX_BATCH_SIZE = int(os.getenv("MAX_BATCH_SIZE", 50))
+COMPACTION_INTERVAL_SECONDS = float(os.getenv("COMPACTION_INTERVAL_SECONDS", 0))
 API_KEY = os.getenv("API_KEY")
 API_KEY_EXEMPT_PATHS = {"/health", "/health/deep", "/docs", "/openapi.json", "/redoc"}
 CORS_ALLOWED_ORIGINS = [
@@ -96,14 +97,30 @@ async def consume_responses():
         await consumer.stop()
 
 
+def _prune_once() -> int:
+    removed = compact_index()
+    if removed:
+        print(f"Pruned {removed} expired cache entries")
+    return removed
+
+
+async def prune_expired_entries():
+    while True:
+        await asyncio.sleep(COMPACTION_INTERVAL_SECONDS)
+        _prune_once()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global producer
     producer = AIOKafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
     await start_with_retry(producer, "producer")
     consumer_task = asyncio.create_task(consume_responses())
+    prune_task = asyncio.create_task(prune_expired_entries()) if COMPACTION_INTERVAL_SECONDS > 0 else None
     yield
     consumer_task.cancel()
+    if prune_task:
+        prune_task.cancel()
     await producer.stop()
 
 
