@@ -55,7 +55,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [x] Integration test: seed cache then assert /query returns a cache hit (Day 8, 2026-08-09)
 - [x] Integration test: cache miss path with a mocked Kafka producer/consumer (Day 8, 2026-08-09)
 - [x] Integration test: /status/{job_id} polling fallback on timeout (Day 8, 2026-08-09)
-- [ ] Test coverage reporting via pytest-cov
+- [x] Test coverage reporting via pytest-cov (Day 8, 2026-08-09)
 - [x] Regression test for clear_cache endpoint resetting index + Redis together (Day 5, 2026-08-03)
 - [ ] Load test script (locust or asyncio-based) exercising /query concurrently
 - [ ] Contract test verifying PromptResponse schema stability
