@@ -200,6 +200,51 @@ def test_query_honors_timeout_override_on_cache_miss(api_client):
     assert elapsed < 1.0
 
 
+def test_status_polling_returns_done_after_worker_completes(api_client, monkeypatch):
+    import json
+
+    import app.main as main_module
+
+    monkeypatch.setattr(main_module, "RESPONSE_TIMEOUT_SECONDS", 0.05)
+    response = api_client.post("/query", json={"prompt": "slow uncached prompt"})
+    assert response.status_code == 202
+    job_id = response.json()["job_id"]
+
+    processing = api_client.get(f"/status/{job_id}")
+    assert processing.status_code == 200
+    assert processing.json() == {"status": "processing"}
+
+    # Simulates app/consumer.py writing the final status once the LLM call
+    # returns - the worker process is the actual writer in production, but
+    # its effect on this shared Redis key is what /status polls for.
+    main_module.redis_client.setex(
+        f"status:{job_id}", 300, json.dumps({"status": "done", "response": "the answer"})
+    )
+
+    done = api_client.get(f"/status/{job_id}")
+    assert done.status_code == 200
+    assert done.json() == {"status": "done", "response": "the answer"}
+
+
+def test_status_polling_returns_error_after_worker_fails(api_client, monkeypatch):
+    import json
+
+    import app.main as main_module
+
+    monkeypatch.setattr(main_module, "RESPONSE_TIMEOUT_SECONDS", 0.05)
+    response = api_client.post("/query", json={"prompt": "another slow uncached prompt"})
+    assert response.status_code == 202
+    job_id = response.json()["job_id"]
+
+    main_module.redis_client.setex(
+        f"status:{job_id}", 300, json.dumps({"status": "error", "error": "llm call failed"})
+    )
+
+    errored = api_client.get(f"/status/{job_id}")
+    assert errored.status_code == 200
+    assert errored.json() == {"status": "error", "error": "llm call failed"}
+
+
 def test_health_deep_reports_healthy_when_all_checks_pass(api_client):
     response = api_client.get("/health/deep")
     assert response.status_code == 200
