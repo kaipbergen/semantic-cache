@@ -146,6 +146,49 @@ def test_query_rejects_non_positive_timeout_override(api_client):
     assert response.status_code == 400
 
 
+def test_cache_miss_resolves_via_kafka_response(api_client, monkeypatch):
+    import json
+
+    import app.main as main_module
+
+    async def fake_send_and_wait(topic, value):
+        data = json.loads(value.decode())
+        correlation_id = data["correlation_id"]
+        future = main_module.pending_requests.get(correlation_id)
+        if future and not future.done():
+            future.set_result(
+                {"correlation_id": correlation_id, "prompt": data["prompt"], "response": "mocked llm answer"}
+            )
+
+    monkeypatch.setattr(main_module.producer, "send_and_wait", fake_send_and_wait)
+
+    response = api_client.post("/query", json={"prompt": "uncached prompt xyz"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["cached"] is False
+    assert body["response"] == "mocked llm answer"
+    assert body["latency_ms"] is not None
+
+
+def test_cache_miss_llm_error_returns_502(api_client, monkeypatch):
+    import json
+
+    import app.main as main_module
+
+    async def fake_send_and_wait(topic, value):
+        data = json.loads(value.decode())
+        correlation_id = data["correlation_id"]
+        future = main_module.pending_requests.get(correlation_id)
+        if future and not future.done():
+            future.set_result({"correlation_id": correlation_id, "error": "llm call failed"})
+
+    monkeypatch.setattr(main_module.producer, "send_and_wait", fake_send_and_wait)
+
+    response = api_client.post("/query", json={"prompt": "another uncached prompt"})
+    assert response.status_code == 502
+    assert response.json() == {"error": {"code": 502, "message": "llm call failed"}}
+
+
 def test_query_honors_timeout_override_on_cache_miss(api_client):
     import time
 

@@ -53,7 +53,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [x] Unit tests for get_adaptive_threshold pattern matching across categories (Day 1, 2026-07-25)
 - [x] Unit tests for get_ttl keyword classification (Day 1, 2026-07-25)
 - [x] Integration test: seed cache then assert /query returns a cache hit (Day 8, 2026-08-09)
-- [ ] Integration test: cache miss path with a mocked Kafka producer/consumer
+- [x] Integration test: cache miss path with a mocked Kafka producer/consumer (Day 8, 2026-08-09)
 - [ ] Integration test: /status/{job_id} polling fallback on timeout
 - [ ] Test coverage reporting via pytest-cov
 - [x] Regression test for clear_cache endpoint resetting index + Redis together (Day 5, 2026-08-03)
