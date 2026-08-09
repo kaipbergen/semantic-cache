@@ -44,7 +44,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [x] Index integrity check on startup (detect prompt_store/index size mismatch) (Day 7, 2026-08-07)
 - [x] Configurable index storage path via env var (currently hardcoded /app path) (Day 1, 2026-07-25)
 - [x] Export cache contents to JSONL for inspection/debugging (Day 7, 2026-08-07)
-- [ ] CLI script to rebuild the FAISS index from Redis contents alone (disaster recovery)
+- [x] CLI script to rebuild the FAISS index from Redis contents alone (disaster recovery) (Day 8, 2026-08-09)
 - [x] Metrics on index size/memory footprint exposed via /stats (Day 5, 2026-08-03)
 
 ## Testing
@@ -144,3 +144,15 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
   (persisted bi_encoder_model tag, stale index discarded on mismatch)
   rather than true per-entry versioning, which covers the stated goal
   (avoid stale vectors after swapping embedding models) more simply.
+- Day 8 (2026-08-09): Re-confirmed and skipped "Per-namespace cache
+  isolation" and "Adaptive threshold auto-tuning" for the same reasons
+  as the Day 6 note above (both still hold - prompt_store is still a
+  flat list/global Redis keyspace, and there's still no feedback signal
+  for tuning). Also skipped "Migration path from IndexFlatIP to
+  IndexIVFFlat" without attempting it: IVFFlat requires training,
+  differs in how add/remove_ids behave, and _evict_oldest/compact_index
+  both assume the IndexFlatIP invariant that positions 0..ntotal-1 stay
+  in insertion order - IVFFlat breaks that assumption, so this needs a
+  dedicated scoped effort (likely alongside reworking eviction/compaction
+  to not rely on positional correspondence) rather than a single-item
+  change alongside other work.

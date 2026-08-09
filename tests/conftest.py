@@ -79,6 +79,9 @@ class FakeRedis:
     def ping(self):
         return True
 
+    def scan_iter(self, match=None):
+        return list(self._store.keys())
+
 
 @pytest.fixture
 def isolated_cache(monkeypatch):
