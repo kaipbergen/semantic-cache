@@ -43,6 +43,12 @@ def test_seed_cache_then_query_is_a_hit(api_client):
     body = query_response.json()
     assert body["cached"] is True
     assert body["response"] == "Paris"
+    assert body["similarity"] is not None
+    assert body["latency_ms"] is not None
+
+    entries = api_client.get("/cache/entries").json()
+    assert entries["total"] == 1
+    assert entries["entries"][0]["prompt"] == "What is the capital of France?"
 
 
 def test_seed_cache_rejects_empty_prompt(api_client):
