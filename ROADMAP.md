@@ -108,7 +108,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [ ] Ensure GROQ_API_KEY and other secrets are never logged
 - [ ] Timeout + circuit breaker around Groq LLM calls
 - [ ] Input sanitization against control chars/ANSI escapes leaking into logs
-- [ ] Non-root user in the Docker image
+- [x] Non-root user in the Docker image (Day 9, 2026-08-11)
 - [ ] Dependency vulnerability scan in CI (pip-audit)
 
 ## Docs

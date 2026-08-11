@@ -11,6 +11,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 ENV PYTHONUNBUFFERED=1
 
-COPY . .
+RUN groupadd --gid 1000 appuser \
+    && useradd --uid 1000 --gid appuser --create-home --shell /usr/sbin/nologin appuser
+
+COPY --chown=appuser:appuser . .
+
+RUN mkdir -p /app/faiss_index && chown -R appuser:appuser /app
+
+USER appuser
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

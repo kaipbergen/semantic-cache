@@ -13,7 +13,7 @@ services:
     volumes:
       - .:/app
       - faiss_data:/app/faiss_index
-      - hf_cache:/root/.cache/huggingface
+      - hf_cache:/home/appuser/.cache/huggingface
 
   consumer:
     build: .
