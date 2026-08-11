@@ -83,7 +83,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [ ] /stats historical rollup (hourly buckets) instead of only cumulative counters
 - [ ] Sentry or similar error-tracking integration hook (optional, env-gated)
 - [ ] Cache hit/miss reason exposed in response (e.g. "below_threshold" vs "no_candidates")
-- [ ] Uptime/version info exposed on /health
+- [x] Uptime/version info exposed on /health (Day 9, 2026-08-11)
 - [ ] Correlation between Kafka correlation_id and access logs for full request tracing
 - [ ] Cache size (index.ntotal + Redis key count) exposed as a metric
 

@@ -119,6 +119,17 @@ def test_http_exception_404_uses_structured_error_schema(api_client):
     assert body == {"error": {"code": 404, "message": "Job not found"}}
 
 
+def test_health_reports_version_and_uptime(api_client):
+    import app.main as main_module
+
+    response = api_client.get("/health")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ok"
+    assert body["version"] == main_module.APP_VERSION
+    assert body["uptime_seconds"] >= 0
+
+
 def test_response_includes_generated_x_request_id_header(api_client):
     response = api_client.get("/health")
     assert "X-Request-ID" in response.headers

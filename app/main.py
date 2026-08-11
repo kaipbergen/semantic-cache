@@ -20,6 +20,9 @@ from app.kafka_client import (
     start_with_retry,
 )
 
+APP_VERSION = os.getenv("APP_VERSION", "0.1.0")
+_START_TIME = time.time()
+
 RESPONSE_TIMEOUT_SECONDS = float(os.getenv("RESPONSE_TIMEOUT_SECONDS", 8))
 STATUS_TTL_SECONDS = 300
 MAX_PROMPT_LENGTH = int(os.getenv("MAX_PROMPT_LENGTH", 4096))
@@ -180,7 +183,11 @@ class PromptResponse(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "version": APP_VERSION,
+        "uptime_seconds": round(time.time() - _START_TIME, 3),
+    }
 
 
 @app.get("/health/deep")
