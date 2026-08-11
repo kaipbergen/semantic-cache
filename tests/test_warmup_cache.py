@@ -21,7 +21,7 @@ def test_load_jsonl_stores_each_prompt_response_pair(isolated_cache, tmp_path):
     assert loaded == 2
     assert skipped == 0
     assert cache.index.ntotal == 2
-    result, _ = cache.search_cache("What is the capital of France?")
+    result, _, _ = cache.search_cache("What is the capital of France?")
     assert result == "Paris"
 
 

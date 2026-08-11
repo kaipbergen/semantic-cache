@@ -45,6 +45,7 @@ def test_seed_cache_then_query_is_a_hit(api_client):
     assert body["response"] == "Paris"
     assert body["similarity"] is not None
     assert body["latency_ms"] is not None
+    assert body["cache_reason"] == "hit"
 
     entries = api_client.get("/cache/entries").json()
     assert entries["total"] == 1

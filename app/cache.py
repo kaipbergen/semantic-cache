@@ -149,10 +149,13 @@ def get_adaptive_threshold(prompt: str) -> float:
     return 0.82
 
 def search_cache(prompt: str):
+    """Returns (response, similarity, reason). `reason` explains a miss
+    ("empty_cache", "no_candidates", "expired", "below_threshold") or marks
+    a hit ("hit")."""
     stats["total_requests"] += 1
     if index.ntotal == 0:
         stats["cache_misses"] += 1
-        return None, None
+        return None, None, "empty_cache"
 
     emb = get_embedding(prompt)
     k = min(5, index.ntotal)
@@ -167,7 +170,7 @@ def search_cache(prompt: str):
 
     if not candidates:
         stats["cache_misses"] += 1
-        return None, float(distances[0][0]) if len(distances[0]) > 0 else None
+        return None, float(distances[0][0]) if len(distances[0]) > 0 else None, "no_candidates"
 
     # Cross-encoder reranking
     pairs = [[prompt, candidate[0]] for candidate in candidates]
@@ -182,10 +185,12 @@ def search_cache(prompt: str):
         if cached_response:
             redis_client.expire(best_prompt, get_ttl(best_prompt))
             stats["cache_hits"] += 1
-            return _decode_payload(cached_response), candidates[best_idx][1]
+            return _decode_payload(cached_response), candidates[best_idx][1], "hit"
+        stats["cache_misses"] += 1
+        return None, candidates[best_idx][1], "expired"
 
     stats["cache_misses"] += 1
-    return None, float(distances[0][0])
+    return None, float(distances[0][0]), "below_threshold"
 
 _GZIP_MAGIC = b"\x1f\x8b"
 

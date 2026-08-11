@@ -179,6 +179,7 @@ class PromptResponse(BaseModel):
     latency_ms: float | None = None
     status: str = "done"
     job_id: str | None = None
+    cache_reason: str | None = None
 
 
 @app.get("/health")
@@ -246,7 +247,9 @@ async def query(
 
     start = time.time()
 
-    cached_response, similarity = (None, None) if bypass_cache else search_cache(request.prompt)
+    cached_response, similarity, cache_reason = (
+        (None, None, "bypassed") if bypass_cache else search_cache(request.prompt)
+    )
 
     if cached_response:
         latency = (time.time() - start) * 1000
@@ -256,6 +259,7 @@ async def query(
             cached=True,
             similarity=round(float(similarity), 3),
             latency_ms=round(latency, 2),
+            cache_reason=cache_reason,
         )
 
     # Cache miss: hand the LLM call off to Kafka instead of awaiting it directly.
@@ -283,6 +287,7 @@ async def query(
                 "job_id": correlation_id,
                 "cached": False,
                 "similarity": round(float(similarity), 3) if similarity else None,
+                "cache_reason": cache_reason,
             },
         )
 
@@ -296,6 +301,7 @@ async def query(
         cached=False,
         similarity=round(float(similarity), 3) if similarity else None,
         latency_ms=round(latency, 2),
+        cache_reason=cache_reason,
     )
 
 
@@ -308,6 +314,7 @@ class BatchQueryResult(BaseModel):
     cached: bool
     response: str | None = None
     similarity: float | None = None
+    cache_reason: str | None = None
 
 
 @app.post("/query/batch", response_model=list[BatchQueryResult])
@@ -324,13 +331,14 @@ def query_batch(request: BatchQueryRequest):
     for prompt in request.prompts:
         if not prompt.strip():
             raise HTTPException(status_code=400, detail="prompt must not be empty")
-        cached_response, similarity = search_cache(prompt)
+        cached_response, similarity, cache_reason = search_cache(prompt)
         results.append(
             BatchQueryResult(
                 prompt=prompt,
                 cached=cached_response is not None,
                 response=cached_response,
                 similarity=round(float(similarity), 3) if similarity is not None else None,
+                cache_reason=cache_reason,
             )
         )
     return results

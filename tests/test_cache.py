@@ -105,9 +105,47 @@ def test_isolated_cache_round_trip(isolated_cache):
     cache.store_cache("What is the capital of France?", "Paris")
     assert cache.index.ntotal == 1
 
-    result, similarity = cache.search_cache("What is the capital of France?")
+    result, similarity, reason = cache.search_cache("What is the capital of France?")
     assert result == "Paris"
     assert similarity == 1.0
+    assert reason == "hit"
+
+
+def test_search_cache_reason_is_empty_cache_when_index_is_empty(isolated_cache):
+    result, similarity, reason = cache.search_cache("anything")
+    assert result is None
+    assert similarity is None
+    assert reason == "empty_cache"
+
+
+def test_search_cache_reason_is_no_candidates_below_similarity_threshold(isolated_cache, monkeypatch):
+    monkeypatch.setattr(cache, "get_adaptive_threshold", lambda prompt: 2.0)
+    cache.store_cache("What is the capital of France?", "Paris")
+
+    result, _, reason = cache.search_cache("What is the capital of France?")
+
+    assert result is None
+    assert reason == "no_candidates"
+
+
+def test_search_cache_reason_is_below_threshold_when_cross_encoder_rejects(isolated_cache, monkeypatch):
+    monkeypatch.setattr(cache, "CROSS_ENCODER_THRESHOLD", 1.5)
+    cache.store_cache("What is the capital of France?", "Paris")
+
+    result, _, reason = cache.search_cache("What is the capital of France?")
+
+    assert result is None
+    assert reason == "below_threshold"
+
+
+def test_search_cache_reason_is_expired_when_redis_key_missing(isolated_cache):
+    cache.store_cache("What is the capital of France?", "Paris")
+    isolated_cache._store.pop("What is the capital of France?")
+
+    result, _, reason = cache.search_cache("What is the capital of France?")
+
+    assert result is None
+    assert reason == "expired"
 
 
 def test_store_cache_does_not_duplicate_existing_prompt_in_index(isolated_cache):
@@ -116,7 +154,7 @@ def test_store_cache_does_not_duplicate_existing_prompt_in_index(isolated_cache)
     assert cache.index.ntotal == 1
     assert cache.prompt_store == ["What is the capital of France?"]
 
-    result, _ = cache.search_cache("What is the capital of France?")
+    result, _, _ = cache.search_cache("What is the capital of France?")
     assert result == "Paris, France"
 
 
@@ -192,10 +230,10 @@ def test_store_cache_evicts_oldest_entry_when_over_max_cache_size(isolated_cache
     assert cache.prompt_store == ["prompt two", "prompt three"]
     assert isolated_cache.get("prompt one") is None
 
-    result, _ = cache.search_cache("prompt one")
+    result, _, _ = cache.search_cache("prompt one")
     assert result is None
 
-    result, _ = cache.search_cache("prompt three")
+    result, _, _ = cache.search_cache("prompt three")
     assert result == "response three"
 
 
@@ -287,7 +325,7 @@ def test_store_cache_keeps_small_payloads_uncompressed(isolated_cache):
     raw = isolated_cache.get("What is the capital of France?")
     assert raw[:2] != cache._GZIP_MAGIC
 
-    result, _ = cache.search_cache("What is the capital of France?")
+    result, _, _ = cache.search_cache("What is the capital of France?")
     assert result == "Paris"
 
 
@@ -301,7 +339,7 @@ def test_store_cache_compresses_large_payloads(isolated_cache, monkeypatch):
     assert raw[:2] == cache._GZIP_MAGIC
     assert len(raw) < len(large_response)
 
-    result, _ = cache.search_cache("Explain a very long topic")
+    result, _, _ = cache.search_cache("Explain a very long topic")
     assert result == large_response
 
 
@@ -356,9 +394,9 @@ def test_compact_index_removes_expired_entries(isolated_cache):
     assert cache.index.ntotal == 2
     assert cache.prompt_store == ["prompt one", "prompt three"]
 
-    result, _ = cache.search_cache("prompt one")
+    result, _, _ = cache.search_cache("prompt one")
     assert result == "response one"
-    result, _ = cache.search_cache("prompt three")
+    result, _, _ = cache.search_cache("prompt three")
     assert result == "response three"
 
 
