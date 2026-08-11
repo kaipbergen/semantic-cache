@@ -10,6 +10,7 @@ from app.kafka_client import (
     KAFKA_BOOTSTRAP_SERVERS,
     LLM_REQUESTS_TOPIC,
     LLM_RESPONSES_TOPIC,
+    send_with_retry,
     start_with_retry,
 )
 
@@ -42,7 +43,7 @@ async def process(producer: AIOKafkaProducer, raw: bytes):
         )
         payload = {"correlation_id": correlation_id, "prompt": prompt, "error": str(exc)}
 
-    await producer.send_and_wait(LLM_RESPONSES_TOPIC, json.dumps(payload).encode())
+    await send_with_retry(producer, LLM_RESPONSES_TOPIC, json.dumps(payload).encode())
 
 
 async def main():

@@ -63,7 +63,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 
 ## Kafka / async pipeline
 - [ ] Dead-letter topic for LLM requests that fail after N retries
-- [ ] Kafka producer retry with exponential backoff on send_and_wait failures
+- [x] Kafka producer retry with exponential backoff on send_and_wait failures (Day 9, 2026-08-11)
 - [ ] Idempotent response handling: dedupe on correlation_id if a message is redelivered
 - [ ] Graceful consumer shutdown draining in-flight messages before exit
 - [ ] Kafka consumer lag exposed via /stats

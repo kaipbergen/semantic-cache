@@ -17,6 +17,7 @@ from app.kafka_client import (
     KAFKA_BOOTSTRAP_SERVERS,
     LLM_REQUESTS_TOPIC,
     LLM_RESPONSES_TOPIC,
+    send_with_retry,
     start_with_retry,
 )
 
@@ -271,7 +272,8 @@ async def query(
     future = asyncio.get_event_loop().create_future()
     pending_requests[correlation_id] = future
 
-    await producer.send_and_wait(
+    await send_with_retry(
+        producer,
         LLM_REQUESTS_TOPIC,
         json.dumps({"correlation_id": correlation_id, "prompt": request.prompt}).encode(),
     )
