@@ -91,7 +91,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [ ] GitHub Actions CI (lint + pytest on push)
 - [ ] Multi-stage Dockerfile separating build and runtime layers to shrink image size
 - [ ] docker-compose healthchecks for Redis and Kafka dependencies
-- [ ] .env.example documenting all configuration variables
+- [x] .env.example documenting all configuration variables (Day 9, 2026-08-11)
 - [ ] CONTRIBUTING.md
 - [ ] Kubernetes manifests (Deployment + Service + ConfigMap) mirroring litekv's k8s/ setup
 - [ ] Pre-commit hooks (black + ruff)
