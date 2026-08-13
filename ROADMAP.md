@@ -1,9 +1,10 @@
-# Semantic Cache — 100 Days of Code
+# Semantic Cache — 300 Days of Code
 
-A 100-day roadmap of real, scoped improvements to the LLM semantic cache, executed in
-batches by an automated daily task (this project runs on alternating days, 5 items per run).
-Each run: implement the items, verify (tests / smoke test), commit, push. No filler commits —
-if an item can't be completed and verified, it stays unchecked and gets picked up next run.
+A 300-day roadmap of real, scoped improvements to the LLM semantic cache, executed in
+batches by an automated daily task (this project rotates with litekv and projectjava,
+5 items per run on its day). Each run: implement the items, verify (tests / smoke test),
+commit, push. No filler commits — if an item can't be completed and verified, it stays
+unchecked and gets picked up next run.
 
 Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY-MM-DD)`).
 
@@ -125,7 +126,22 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [ ] Streaming responses for cache misses (SSE passthrough from Groq)
 - [ ] Thin Python client SDK wrapping the API
 - [ ] Minimal admin UI (static HTML hitting /stats and /cache endpoints)
-- [ ] Day 100: final benchmark pass + updated numbers + 100-day retrospective
+- [ ] GET /cache/entries/{prompt_hash} to fetch a single entry's full record
+- [ ] POST /cache/entries/{prompt_hash}/ttl to manually extend a specific entry's TTL
+- [ ] POST /cache/seed/batch for bulk-loading many prompt/response pairs at once
+- [ ] "Forget prompt" endpoint that purges a prompt and its cached response entirely
+- [ ] Multi-tenant API keys with per-key rate limits, distinct from the global API_KEY
+- [ ] Async webhook callback option as an alternative to polling /status/{job_id}
+- [ ] Configurable eviction policy choice (LRU vs LFU) instead of LRU-only
+- [ ] /stats latency histograms (p50/p95/p99) instead of only averages
+- [ ] OpenTelemetry tracing spans across API → Kafka → worker → LLM call
+- [ ] Chaos test: simulate a Redis connection drop mid-request, verify graceful fallback
+- [ ] Property-based tests (hypothesis) for normalize_query and get_adaptive_threshold
+- [ ] docker-compose profile for a full local end-to-end smoke test in CI
+- [ ] Automatic scheduled index backup (background task) instead of only the manual CLI script
+- [ ] Design doc for sharding the FAISS index across multiple processes for horizontal scale
+- [ ] Minimal Go client example wrapping /query
+- [ ] Final day: 300-day program retrospective + updated benchmark numbers
 
 ## Notes
 - Day 6 (2026-08-05): Skipped "Per-namespace cache isolation via an optional
