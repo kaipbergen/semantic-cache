@@ -8,6 +8,7 @@ from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 from app.llm import call_llm
 from app.kafka_client import (
     KAFKA_BOOTSTRAP_SERVERS,
+    LLM_REQUESTS_DLQ_TOPIC,
     LLM_REQUESTS_TOPIC,
     LLM_RESPONSES_TOPIC,
     send_with_retry,
@@ -20,6 +21,26 @@ from app.kafka_client import (
 # worker never touches it.
 redis_client = redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379"))
 STATUS_TTL_SECONDS = 300
+LLM_CALL_MAX_ATTEMPTS = int(os.getenv("LLM_CALL_MAX_ATTEMPTS", 3))
+LLM_CALL_RETRY_BASE_DELAY = float(os.getenv("LLM_CALL_RETRY_BASE_DELAY", 0.5))
+
+
+async def _call_llm_with_retry(prompt: str) -> str:
+    """Retry transient LLM failures with exponential backoff before giving
+    up; the caller routes the request to the dead-letter topic once attempts
+    are exhausted."""
+    last_exc = None
+    for attempt in range(1, LLM_CALL_MAX_ATTEMPTS + 1):
+        try:
+            return await call_llm(prompt)
+        except Exception as exc:
+            last_exc = exc
+            if attempt == LLM_CALL_MAX_ATTEMPTS:
+                break
+            delay = LLM_CALL_RETRY_BASE_DELAY * (2 ** (attempt - 1))
+            print(f"[consumer] call_llm failed ({attempt}/{LLM_CALL_MAX_ATTEMPTS}): {exc} - retrying in {delay}s")
+            await asyncio.sleep(delay)
+    raise last_exc
 
 
 async def process(producer: AIOKafkaProducer, raw: bytes):
@@ -28,7 +49,7 @@ async def process(producer: AIOKafkaProducer, raw: bytes):
     prompt = data["prompt"]
 
     try:
-        response = await call_llm(prompt)
+        response = await _call_llm_with_retry(prompt)
         redis_client.setex(
             f"status:{correlation_id}",
             STATUS_TTL_SECONDS,
@@ -42,6 +63,18 @@ async def process(producer: AIOKafkaProducer, raw: bytes):
             json.dumps({"status": "error", "error": str(exc)}),
         )
         payload = {"correlation_id": correlation_id, "prompt": prompt, "error": str(exc)}
+        await send_with_retry(
+            producer,
+            LLM_REQUESTS_DLQ_TOPIC,
+            json.dumps(
+                {
+                    "correlation_id": correlation_id,
+                    "prompt": prompt,
+                    "error": str(exc),
+                    "attempts": LLM_CALL_MAX_ATTEMPTS,
+                }
+            ).encode(),
+        )
 
     await send_with_retry(producer, LLM_RESPONSES_TOPIC, json.dumps(payload).encode())
 

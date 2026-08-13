@@ -4,6 +4,7 @@ import os
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
 LLM_REQUESTS_TOPIC = "llm-requests"
 LLM_RESPONSES_TOPIC = "llm-responses"
+LLM_REQUESTS_DLQ_TOPIC = "llm-requests-dlq"
 
 
 async def start_with_retry(client, name: str, retries: int = 15, delay: float = 3.0):
