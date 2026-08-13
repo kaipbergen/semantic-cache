@@ -18,6 +18,11 @@ cp .env.example .env
 pytest
 ```
 
+## Troubleshooting
+
+- **Redis connection refused**: make sure `docker-compose up` includes the `redis` service and it's healthy before starting the API.
+- **FAISS index not found**: run `docker-compose down -v` once to reset volumes if the index was built with a different embedding model.
+
 ## Submitting changes
 
 1. Fork the repo and create a branch from `main`.
