@@ -74,6 +74,29 @@ producer: AIOKafkaProducer | None = None
 pending_requests: dict[str, asyncio.Future] = {}
 
 
+def _mark_response_processed(correlation_id: str) -> bool:
+    """Redis SETNX guard: True the first time a correlation_id's response is
+    seen, False on a Kafka redelivery of the same message (at-least-once
+    delivery can redeliver after a commit races a consumer crash)."""
+    return bool(redis_client.set(f"processed:{correlation_id}", "1", nx=True, ex=STATUS_TTL_SECONDS))
+
+
+def handle_response_message(data: dict):
+    correlation_id = data.get("correlation_id")
+    is_new = _mark_response_processed(correlation_id) if correlation_id else True
+
+    if "response" in data and is_new:
+        # API is the single writer of the in-process FAISS index, so caching
+        # always happens here - even for requests that already timed out and
+        # got a 202 back. Skipped on a redelivered duplicate so a stale
+        # message can't refresh the entry's TTL out of turn.
+        store_cache(data["prompt"], data["response"])
+
+    future = pending_requests.pop(correlation_id, None)
+    if future and not future.done():
+        future.set_result(data)
+
+
 async def consume_responses():
     consumer = AIOKafkaConsumer(
         LLM_RESPONSES_TOPIC,
@@ -86,17 +109,7 @@ async def consume_responses():
     try:
         async for msg in consumer:
             data = json.loads(msg.value.decode())
-            correlation_id = data.get("correlation_id")
-
-            if "response" in data:
-                # API is the single writer of the in-process FAISS index, so
-                # caching always happens here - even for requests that already
-                # timed out and got a 202 back.
-                store_cache(data["prompt"], data["response"])
-
-            future = pending_requests.pop(correlation_id, None)
-            if future and not future.done():
-                future.set_result(data)
+            handle_response_message(data)
     finally:
         await consumer.stop()
 

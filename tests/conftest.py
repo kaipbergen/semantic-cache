@@ -59,6 +59,14 @@ class FakeRedis:
         self._store[key] = value
         self._ttl[key] = ttl
 
+    def set(self, key, value, nx=False, ex=None):
+        if nx and key in self._store:
+            return None
+        self._store[key] = value
+        if ex is not None:
+            self._ttl[key] = ex
+        return True
+
     def ttl(self, key):
         return self._ttl.get(key, -2)
 
