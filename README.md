@@ -1,5 +1,8 @@
 # 🧠 LLM Semantic Cache
 
+[![CI](https://github.com/kaipbergen/semantic-cache/actions/workflows/test.yml/badge.svg)](https://github.com/kaipbergen/semantic-cache/actions)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
+
 A production-grade semantic caching layer for LLM APIs that reduces response latency by **94%** and cuts API costs by **40%** using two-stage vector retrieval and cross-encoder reranking.
 
 ## 🎯 Project Highlights
