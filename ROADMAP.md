@@ -58,7 +58,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [x] Test coverage reporting via pytest-cov (Day 8, 2026-08-09)
 - [x] Regression test for clear_cache endpoint resetting index + Redis together (Day 5, 2026-08-03)
 - [x] Load test script (locust or asyncio-based) exercising /query concurrently (Day 10, 2026-08-13)
-- [ ] Contract test verifying PromptResponse schema stability
+- [x] Contract test verifying PromptResponse schema stability (Day 10, 2026-08-13)
 - [ ] CI job matrix testing against two Python versions
 
 ## Kafka / async pipeline
