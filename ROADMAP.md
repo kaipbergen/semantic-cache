@@ -69,7 +69,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [x] Graceful consumer shutdown draining in-flight messages before exit (Day 11, 2026-08-16)
 - [ ] Kafka consumer lag exposed via /stats
 - [x] Configurable consumer group ID via env var for horizontal scaling (Day 11, 2026-08-16)
-- [ ] Poison-message handling: skip and log malformed Kafka payloads instead of crashing the consumer
+- [x] Poison-message handling: skip and log malformed Kafka payloads instead of crashing the consumer (Day 11, 2026-08-16)
 - [ ] Startup readiness check that blocks serving traffic until Kafka topics exist
 - [ ] Kafka topic auto-creation with sane partition/replication defaults documented
 - [ ] Backpressure handling: bound pending_requests size and reject new requests when saturated

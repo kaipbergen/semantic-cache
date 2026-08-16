@@ -119,6 +119,65 @@ async def test_process_sends_to_dead_letter_topic_after_exhausting_retries(monke
     assert json.loads(fake_redis.store["status:dead-1"])["status"] == "error"
 
 
+@pytest.mark.asyncio
+async def test_process_skips_invalid_json_without_raising(monkeypatch):
+    import app.consumer as consumer_module
+
+    monkeypatch.setattr(consumer_module, "redis_client", _FakeRedis())
+
+    producer = _FakeProducer()
+    await process(producer, b"not json at all {{{")
+
+    assert producer.sent == []
+
+
+@pytest.mark.asyncio
+async def test_process_skips_message_missing_required_fields(monkeypatch):
+    import app.consumer as consumer_module
+
+    monkeypatch.setattr(consumer_module, "redis_client", _FakeRedis())
+
+    producer = _FakeProducer()
+    raw = json.dumps({"prompt": "hi, no correlation_id"}).encode()
+    await process(producer, raw)
+
+    assert producer.sent == []
+
+
+@pytest.mark.asyncio
+async def test_consume_loop_commits_past_a_poison_message_and_continues(monkeypatch):
+    import app.consumer as consumer_module
+
+    monkeypatch.setattr(consumer_module, "redis_client", _FakeRedis())
+
+    async def fake_call_llm(prompt):
+        return "an answer"
+
+    monkeypatch.setattr(consumer_module, "call_llm", fake_call_llm)
+
+    messages = [
+        b"not json at all {{{",
+        json.dumps({"correlation_id": "b", "prompt": "hi2"}).encode(),
+    ]
+    shutdown_event = asyncio.Event()
+
+    consumer = _FakePolledConsumer(messages)
+    fake_producer = _FakeProducer()
+
+    async def stop_after_second(producer, raw):
+        await process(producer, raw)
+        if consumer.calls == len(messages):
+            shutdown_event.set()
+
+    monkeypatch.setattr(consumer_module, "process", stop_after_second)
+
+    await consumer_module._consume_loop(consumer, fake_producer, shutdown_event)
+
+    assert consumer.committed == 2
+    topics_sent = [topic for topic, _ in fake_producer.sent]
+    assert topics_sent == [LLM_RESPONSES_TOPIC]
+
+
 class _FakePolledConsumer:
     def __init__(self, messages):
         self._messages = messages

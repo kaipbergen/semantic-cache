@@ -47,9 +47,16 @@ async def _call_llm_with_retry(prompt: str) -> str:
 
 
 async def process(producer: AIOKafkaProducer, raw: bytes):
-    data = json.loads(raw.decode())
-    correlation_id = data["correlation_id"]
-    prompt = data["prompt"]
+    try:
+        data = json.loads(raw.decode())
+        correlation_id = data["correlation_id"]
+        prompt = data["prompt"]
+    except (json.JSONDecodeError, UnicodeDecodeError, KeyError, TypeError) as exc:
+        # A malformed payload can never succeed on retry, so log and drop it
+        # rather than raising - an uncaught exception here would crash the
+        # whole consume loop and stop all other messages from being processed.
+        print(f"[consumer] skipping malformed message ({exc.__class__.__name__}: {exc}): {raw!r}")
+        return
 
     try:
         response = await _call_llm_with_retry(prompt)
