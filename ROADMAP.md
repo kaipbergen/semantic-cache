@@ -66,7 +66,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [x] Dead-letter topic for LLM requests that fail after N retries (Day 10, 2026-08-13)
 - [x] Kafka producer retry with exponential backoff on send_and_wait failures (Day 9, 2026-08-11)
 - [x] Idempotent response handling: dedupe on correlation_id if a message is redelivered (Day 10, 2026-08-13)
-- [ ] Graceful consumer shutdown draining in-flight messages before exit
+- [x] Graceful consumer shutdown draining in-flight messages before exit (Day 11, 2026-08-16)
 - [ ] Kafka consumer lag exposed via /stats
 - [x] Configurable consumer group ID via env var for horizontal scaling (Day 11, 2026-08-16)
 - [ ] Poison-message handling: skip and log malformed Kafka payloads instead of crashing the consumer

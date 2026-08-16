@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import signal
 
 import redis
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
@@ -24,6 +25,7 @@ STATUS_TTL_SECONDS = 300
 LLM_CALL_MAX_ATTEMPTS = int(os.getenv("LLM_CALL_MAX_ATTEMPTS", 3))
 LLM_CALL_RETRY_BASE_DELAY = float(os.getenv("LLM_CALL_RETRY_BASE_DELAY", 0.5))
 CONSUMER_GROUP_ID = os.getenv("CONSUMER_GROUP_ID", "llm-worker-group")
+CONSUMER_SHUTDOWN_POLL_SECONDS = float(os.getenv("CONSUMER_SHUTDOWN_POLL_SECONDS", 1.0))
 
 
 async def _call_llm_with_retry(prompt: str) -> str:
@@ -80,6 +82,20 @@ async def process(producer: AIOKafkaProducer, raw: bytes):
     await send_with_retry(producer, LLM_RESPONSES_TOPIC, json.dumps(payload).encode())
 
 
+async def _consume_loop(consumer, producer, shutdown_event: asyncio.Event, poll_timeout: float = 1.0):
+    """Poll for messages instead of `async for msg in consumer` so a pending
+    shutdown is noticed between messages even while idle, but a message
+    already being processed always runs to completion (process + commit)
+    before the loop re-checks shutdown_event and exits."""
+    while not shutdown_event.is_set():
+        try:
+            msg = await asyncio.wait_for(consumer.getone(), timeout=poll_timeout)
+        except asyncio.TimeoutError:
+            continue
+        await process(producer, msg.value)
+        await consumer.commit()
+
+
 async def main():
     consumer = AIOKafkaConsumer(
         LLM_REQUESTS_TOPIC,
@@ -93,11 +109,19 @@ async def main():
     await start_with_retry(consumer, "worker-consumer")
     await start_with_retry(producer, "worker-producer")
 
+    shutdown_event = asyncio.Event()
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        try:
+            loop.add_signal_handler(sig, shutdown_event.set)
+        except NotImplementedError:
+            # add_signal_handler is unsupported on some platforms (e.g. Windows).
+            pass
+
     print(f"[consumer] listening on '{LLM_REQUESTS_TOPIC}'")
     try:
-        async for msg in consumer:
-            await process(producer, msg.value)
-            await consumer.commit()
+        await _consume_loop(consumer, producer, shutdown_event, CONSUMER_SHUTDOWN_POLL_SECONDS)
+        print("[consumer] shutdown signal received, drained in-flight work - exiting")
     finally:
         await consumer.stop()
         await producer.stop()

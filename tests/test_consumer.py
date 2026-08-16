@@ -1,9 +1,11 @@
+import asyncio
 import json
+import types
 
 import pytest
 
 from app.kafka_client import LLM_REQUESTS_DLQ_TOPIC, LLM_RESPONSES_TOPIC
-from app.consumer import process
+from app.consumer import _consume_loop, process
 
 
 class _FakeProducer:
@@ -115,6 +117,78 @@ async def test_process_sends_to_dead_letter_topic_after_exhausting_retries(monke
     response_payload = json.loads(producer.sent[1][1].decode())
     assert response_payload == {"correlation_id": "dead-1", "prompt": "hello", "error": "llm is down"}
     assert json.loads(fake_redis.store["status:dead-1"])["status"] == "error"
+
+
+class _FakePolledConsumer:
+    def __init__(self, messages):
+        self._messages = messages
+        self.calls = 0
+        self.committed = 0
+
+    async def getone(self):
+        msg = self._messages[self.calls]
+        self.calls += 1
+        return types.SimpleNamespace(value=msg)
+
+    async def commit(self):
+        self.committed += 1
+
+
+@pytest.mark.asyncio
+async def test_consume_loop_drains_in_flight_message_before_exiting_on_shutdown(monkeypatch):
+    import app.consumer as consumer_module
+
+    messages = [
+        json.dumps({"correlation_id": "a", "prompt": "hi"}).encode(),
+        json.dumps({"correlation_id": "b", "prompt": "hi2"}).encode(),
+    ]
+    shutdown_event = asyncio.Event()
+    processed = []
+
+    async def fake_process(producer, raw):
+        processed.append(raw)
+        # Simulate a shutdown signal arriving while this message is still
+        # being processed - the loop must finish it (and commit) rather
+        # than abandoning it mid-flight.
+        shutdown_event.set()
+
+    monkeypatch.setattr(consumer_module, "process", fake_process)
+
+    consumer = _FakePolledConsumer(messages)
+    await consumer_module._consume_loop(consumer, producer=None, shutdown_event=shutdown_event)
+
+    assert processed == [messages[0]]
+    assert consumer.committed == 1
+    assert consumer.calls == 1
+
+
+@pytest.mark.asyncio
+async def test_consume_loop_exits_promptly_when_idle_and_shutdown_requested(monkeypatch):
+    import app.consumer as consumer_module
+
+    class _NeverReadyConsumer:
+        async def getone(self):
+            await asyncio.sleep(10)
+
+        async def commit(self):
+            pass
+
+    processed = []
+
+    async def fake_process(producer, raw):
+        processed.append(raw)
+
+    monkeypatch.setattr(consumer_module, "process", fake_process)
+
+    shutdown_event = asyncio.Event()
+    shutdown_event.set()
+
+    await asyncio.wait_for(
+        consumer_module._consume_loop(_NeverReadyConsumer(), producer=None, shutdown_event=shutdown_event, poll_timeout=0.01),
+        timeout=1.0,
+    )
+
+    assert processed == []
 
 
 def test_consumer_group_id_defaults_to_llm_worker_group(monkeypatch):
