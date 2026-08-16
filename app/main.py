@@ -13,10 +13,12 @@ from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.cache import compact_index, search_cache, store_cache, get_stats, stats, redis_client
+from app.consumer import CONSUMER_GROUP_ID
 from app.kafka_client import (
     KAFKA_BOOTSTRAP_SERVERS,
     LLM_REQUESTS_TOPIC,
     LLM_RESPONSES_TOPIC,
+    get_consumer_lag,
     send_with_retry,
     start_with_retry,
 )
@@ -32,6 +34,7 @@ RATE_LIMIT_REFILL_PER_SECOND = float(os.getenv("RATE_LIMIT_REFILL_PER_SECOND", 5
 MAX_TIMEOUT_OVERRIDE_SECONDS = float(os.getenv("MAX_TIMEOUT_OVERRIDE_SECONDS", 60))
 MAX_BATCH_SIZE = int(os.getenv("MAX_BATCH_SIZE", 50))
 MAX_PENDING_REQUESTS = int(os.getenv("MAX_PENDING_REQUESTS", 1000))
+CONSUMER_LAG_TIMEOUT_SECONDS = float(os.getenv("CONSUMER_LAG_TIMEOUT_SECONDS", 5))
 COMPACTION_INTERVAL_SECONDS = float(os.getenv("COMPACTION_INTERVAL_SECONDS", 0))
 API_KEY = os.getenv("API_KEY")
 API_KEY_EXEMPT_PATHS = {"/health", "/health/deep", "/docs", "/openapi.json", "/redoc"}
@@ -400,8 +403,18 @@ def get_job_status(job_id: str):
 
 
 @app.get("/stats")
-def get_cache_stats():
-    return get_stats()
+async def get_cache_stats():
+    stats_payload = get_stats()
+    try:
+        stats_payload["consumer_lag"] = await asyncio.wait_for(
+            get_consumer_lag(CONSUMER_GROUP_ID, LLM_REQUESTS_TOPIC),
+            timeout=CONSUMER_LAG_TIMEOUT_SECONDS,
+        )
+    except Exception:
+        # A Kafka hiccup or slow admin request shouldn't take down /stats -
+        # the rest of the cache stats are still meaningful without lag.
+        stats_payload["consumer_lag"] = None
+    return stats_payload
 
 
 @app.delete("/cache")

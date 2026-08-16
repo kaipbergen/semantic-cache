@@ -154,10 +154,14 @@ def api_client(isolated_cache, monkeypatch):
     async def fake_consume_responses():
         pass
 
+    async def fake_get_consumer_lag(group_id, topic, bootstrap_servers=None):
+        return {"total_lag": 0, "per_partition": {}}
+
     monkeypatch.setattr(main_module, "AIOKafkaProducer", FakeProducer)
     monkeypatch.setattr(main_module, "start_with_retry", fake_start_with_retry)
     monkeypatch.setattr(main_module, "consume_responses", fake_consume_responses)
     monkeypatch.setattr(main_module, "redis_client", isolated_cache)
+    monkeypatch.setattr(main_module, "get_consumer_lag", fake_get_consumer_lag)
 
     with TestClient(main_module.app) as client:
         yield client

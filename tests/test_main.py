@@ -481,6 +481,25 @@ def test_query_allowed_again_once_pending_requests_drops_below_limit(api_client,
     assert main_module.pending_requests == {}
 
 
+def test_stats_includes_consumer_lag(api_client):
+    response = api_client.get("/stats")
+    assert response.status_code == 200
+    assert response.json()["consumer_lag"] == {"total_lag": 0, "per_partition": {}}
+
+
+def test_stats_reports_none_consumer_lag_when_kafka_call_fails(api_client, monkeypatch):
+    import app.main as main_module
+
+    async def failing_get_consumer_lag(group_id, topic, bootstrap_servers=None):
+        raise ConnectionError("kafka unreachable")
+
+    monkeypatch.setattr(main_module, "get_consumer_lag", failing_get_consumer_lag)
+
+    response = api_client.get("/stats")
+    assert response.status_code == 200
+    assert response.json()["consumer_lag"] is None
+
+
 def test_rate_limit_is_tracked_per_client_ip(monkeypatch):
     import app.main as main_module
 
