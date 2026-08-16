@@ -23,6 +23,7 @@ redis_client = redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379"))
 STATUS_TTL_SECONDS = 300
 LLM_CALL_MAX_ATTEMPTS = int(os.getenv("LLM_CALL_MAX_ATTEMPTS", 3))
 LLM_CALL_RETRY_BASE_DELAY = float(os.getenv("LLM_CALL_RETRY_BASE_DELAY", 0.5))
+CONSUMER_GROUP_ID = os.getenv("CONSUMER_GROUP_ID", "llm-worker-group")
 
 
 async def _call_llm_with_retry(prompt: str) -> str:
@@ -83,7 +84,7 @@ async def main():
     consumer = AIOKafkaConsumer(
         LLM_REQUESTS_TOPIC,
         bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
-        group_id="llm-worker-group",
+        group_id=CONSUMER_GROUP_ID,
         auto_offset_reset="earliest",
         enable_auto_commit=False,
     )

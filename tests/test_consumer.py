@@ -117,6 +117,33 @@ async def test_process_sends_to_dead_letter_topic_after_exhausting_retries(monke
     assert json.loads(fake_redis.store["status:dead-1"])["status"] == "error"
 
 
+def test_consumer_group_id_defaults_to_llm_worker_group(monkeypatch):
+    import importlib
+
+    import app.consumer as consumer_module
+
+    monkeypatch.delenv("CONSUMER_GROUP_ID", raising=False)
+    importlib.reload(consumer_module)
+    try:
+        assert consumer_module.CONSUMER_GROUP_ID == "llm-worker-group"
+    finally:
+        importlib.reload(consumer_module)
+
+
+def test_consumer_group_id_is_configurable_via_env_var(monkeypatch):
+    import importlib
+
+    import app.consumer as consumer_module
+
+    monkeypatch.setenv("CONSUMER_GROUP_ID", "llm-worker-group-2")
+    importlib.reload(consumer_module)
+    try:
+        assert consumer_module.CONSUMER_GROUP_ID == "llm-worker-group-2"
+    finally:
+        monkeypatch.delenv("CONSUMER_GROUP_ID", raising=False)
+        importlib.reload(consumer_module)
+
+
 @pytest.mark.asyncio
 async def test_call_llm_with_retry_raises_the_last_exception(monkeypatch):
     import app.consumer as consumer_module

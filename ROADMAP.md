@@ -68,7 +68,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [x] Idempotent response handling: dedupe on correlation_id if a message is redelivered (Day 10, 2026-08-13)
 - [ ] Graceful consumer shutdown draining in-flight messages before exit
 - [ ] Kafka consumer lag exposed via /stats
-- [ ] Configurable consumer group ID via env var for horizontal scaling
+- [x] Configurable consumer group ID via env var for horizontal scaling (Day 11, 2026-08-16)
 - [ ] Poison-message handling: skip and log malformed Kafka payloads instead of crashing the consumer
 - [ ] Startup readiness check that blocks serving traffic until Kafka topics exist
 - [ ] Kafka topic auto-creation with sane partition/replication defaults documented
