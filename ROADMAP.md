@@ -72,7 +72,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [x] Poison-message handling: skip and log malformed Kafka payloads instead of crashing the consumer (Day 11, 2026-08-16)
 - [ ] Startup readiness check that blocks serving traffic until Kafka topics exist
 - [ ] Kafka topic auto-creation with sane partition/replication defaults documented
-- [ ] Backpressure handling: bound pending_requests size and reject new requests when saturated
+- [x] Backpressure handling: bound pending_requests size and reject new requests when saturated (Day 11, 2026-08-16)
 
 ## Observability
 - [ ] Prometheus /metrics endpoint (request count, hit rate, latency histograms)

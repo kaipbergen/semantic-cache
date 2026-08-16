@@ -443,6 +443,44 @@ def test_query_batch_rejects_over_max_batch_size(api_client, monkeypatch):
     assert response.status_code == 413
 
 
+def test_query_rejects_with_503_when_pending_requests_is_saturated(api_client, monkeypatch):
+    import app.main as main_module
+
+    monkeypatch.setattr(main_module, "MAX_PENDING_REQUESTS", 1)
+    monkeypatch.setitem(main_module.pending_requests, "already-pending", asyncio.get_event_loop().create_future())
+
+    response = api_client.post("/query", json={"prompt": "uncached prompt under load"})
+    assert response.status_code == 503
+    assert response.json() == {
+        "error": {"code": 503, "message": "Server is at capacity, please retry shortly"}
+    }
+
+
+def test_query_allowed_again_once_pending_requests_drops_below_limit(api_client, monkeypatch):
+    import app.main as main_module
+
+    monkeypatch.setattr(main_module, "MAX_PENDING_REQUESTS", 1)
+
+    async def fake_send_and_wait(topic, value):
+        import json
+
+        data = json.loads(value.decode())
+        correlation_id = data["correlation_id"]
+        # Mirror handle_response_message: pop before resolving, since that's
+        # what actually removes the entry from pending_requests in production.
+        future = main_module.pending_requests.pop(correlation_id, None)
+        if future and not future.done():
+            future.set_result(
+                {"correlation_id": correlation_id, "prompt": data["prompt"], "response": "answer"}
+            )
+
+    monkeypatch.setattr(main_module.producer, "send_and_wait", fake_send_and_wait)
+
+    response = api_client.post("/query", json={"prompt": "uncached prompt below limit"})
+    assert response.status_code == 200
+    assert main_module.pending_requests == {}
+
+
 def test_rate_limit_is_tracked_per_client_ip(monkeypatch):
     import app.main as main_module
 

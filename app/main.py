@@ -31,6 +31,7 @@ RATE_LIMIT_CAPACITY = float(os.getenv("RATE_LIMIT_CAPACITY", 20))
 RATE_LIMIT_REFILL_PER_SECOND = float(os.getenv("RATE_LIMIT_REFILL_PER_SECOND", 5))
 MAX_TIMEOUT_OVERRIDE_SECONDS = float(os.getenv("MAX_TIMEOUT_OVERRIDE_SECONDS", 60))
 MAX_BATCH_SIZE = int(os.getenv("MAX_BATCH_SIZE", 50))
+MAX_PENDING_REQUESTS = int(os.getenv("MAX_PENDING_REQUESTS", 1000))
 COMPACTION_INTERVAL_SECONDS = float(os.getenv("COMPACTION_INTERVAL_SECONDS", 0))
 API_KEY = os.getenv("API_KEY")
 API_KEY_EXEMPT_PATHS = {"/health", "/health/deep", "/docs", "/openapi.json", "/redoc"}
@@ -277,6 +278,12 @@ async def query(
         )
 
     # Cache miss: hand the LLM call off to Kafka instead of awaiting it directly.
+    if len(pending_requests) >= MAX_PENDING_REQUESTS:
+        raise HTTPException(
+            status_code=503,
+            detail="Server is at capacity, please retry shortly",
+        )
+
     correlation_id = str(uuid.uuid4())
     redis_client.setex(
         f"status:{correlation_id}", STATUS_TTL_SECONDS, json.dumps({"status": "processing"})
