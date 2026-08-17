@@ -119,6 +119,14 @@ Open `http://localhost:8000/docs` for Swagger UI.
 | `DELETE` | `/cache` | Clear all cache |
 | `DELETE` | `/cache/{key}` | Delete specific entry |
 
+### Example request
+
+```bash
+curl -X POST http://localhost:8000/query \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "What is machine learning?"}'
+```
+
 ## 📈 Run Benchmarks
 
 ```bash
