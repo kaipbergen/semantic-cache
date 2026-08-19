@@ -126,7 +126,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [ ] Streaming responses for cache misses (SSE passthrough from Groq)
 - [ ] Thin Python client SDK wrapping the API
 - [ ] Minimal admin UI (static HTML hitting /stats and /cache endpoints)
-- [ ] GET /cache/entries/{prompt_hash} to fetch a single entry's full record
+- [x] GET /cache/entries/{prompt_hash} to fetch a single entry's full record (Day 12, 2026-08-19)
 - [ ] POST /cache/entries/{prompt_hash}/ttl to manually extend a specific entry's TTL
 - [ ] POST /cache/seed/batch for bulk-loading many prompt/response pairs at once
 - [ ] "Forget prompt" endpoint that purges a prompt and its cached response entirely

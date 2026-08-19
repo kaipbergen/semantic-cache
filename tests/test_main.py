@@ -88,6 +88,27 @@ def test_list_cache_entries_rejects_invalid_pagination(api_client):
     assert response.status_code == 400
 
 
+def test_get_cache_entry_returns_full_record(api_client):
+    import urllib.parse
+
+    api_client.post("/cache/seed", json={"prompt": "What is the capital of France?", "response": "Paris"})
+
+    response = api_client.get(
+        f"/cache/entries/{urllib.parse.quote('What is the capital of France?', safe='')}"
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["prompt"] == "What is the capital of France?"
+    assert body["response"] == "Paris"
+    assert body["ttl_seconds"] > 0
+    assert body["indexed"] is True
+
+
+def test_get_cache_entry_returns_404_for_missing_prompt(api_client):
+    response = api_client.get("/cache/entries/never seeded")
+    assert response.status_code == 404
+
+
 def test_rate_limit_blocks_requests_once_bucket_is_exhausted(api_client, monkeypatch):
     import app.main as main_module
 

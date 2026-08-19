@@ -397,6 +397,21 @@ def list_cache_entries(limit: int = 20, offset: int = 0):
     return {"total": len(prompt_store), "limit": limit, "offset": offset, "entries": entries}
 
 
+@app.get("/cache/entries/{prompt_hash}")
+def get_cache_entry(prompt_hash: str):
+    from app.cache import _decode_payload, prompt_store
+
+    raw = redis_client.get(prompt_hash)
+    if raw is None:
+        raise HTTPException(status_code=404, detail="Cache entry not found")
+    return {
+        "prompt": prompt_hash,
+        "response": _decode_payload(raw),
+        "ttl_seconds": redis_client.ttl(prompt_hash),
+        "indexed": prompt_hash in prompt_store,
+    }
+
+
 @app.get("/status/{job_id}")
 def get_job_status(job_id: str):
     raw = redis_client.get(f"status:{job_id}")
