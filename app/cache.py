@@ -268,4 +268,5 @@ def get_stats() -> dict:
         "total_cached_prompts": index.ntotal,
         "index_dimension": dimension,
         "index_vectors_bytes": index.ntotal * dimension * 4,
+        "redis_key_count": redis_client.dbsize(),
     }

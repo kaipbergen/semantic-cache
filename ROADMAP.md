@@ -86,7 +86,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [x] Cache hit/miss reason exposed in response (e.g. "below_threshold" vs "no_candidates") (Day 9, 2026-08-11)
 - [x] Uptime/version info exposed on /health (Day 9, 2026-08-11)
 - [ ] Correlation between Kafka correlation_id and access logs for full request tracing
-- [ ] Cache size (index.ntotal + Redis key count) exposed as a metric
+- [x] Cache size (index.ntotal + Redis key count) exposed as a metric (Day 12, 2026-08-19)
 
 ## Deployment & devex
 - [ ] GitHub Actions CI (lint + pytest on push)

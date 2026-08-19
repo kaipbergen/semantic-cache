@@ -90,6 +90,9 @@ class FakeRedis:
     def scan_iter(self, match=None):
         return list(self._store.keys())
 
+    def dbsize(self):
+        return len(self._store)
+
 
 @pytest.fixture
 def isolated_cache(monkeypatch):
