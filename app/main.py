@@ -36,6 +36,7 @@ MAX_BATCH_SIZE = int(os.getenv("MAX_BATCH_SIZE", 50))
 MAX_PENDING_REQUESTS = int(os.getenv("MAX_PENDING_REQUESTS", 1000))
 CONSUMER_LAG_TIMEOUT_SECONDS = float(os.getenv("CONSUMER_LAG_TIMEOUT_SECONDS", 5))
 COMPACTION_INTERVAL_SECONDS = float(os.getenv("COMPACTION_INTERVAL_SECONDS", 0))
+SLOW_QUERY_THRESHOLD_MS = float(os.getenv("SLOW_QUERY_THRESHOLD_MS", 5000))
 API_KEY = os.getenv("API_KEY")
 API_KEY_EXEMPT_PATHS = {"/health", "/health/deep", "/docs", "/openapi.json", "/redoc"}
 CORS_ALLOWED_ORIGINS = [
@@ -321,6 +322,8 @@ async def query(
 
     latency = (time.time() - start) * 1000
     stats["total_llm_latency_ms"] += latency
+    if latency > SLOW_QUERY_THRESHOLD_MS:
+        print(f"[slow-query] LLM call took {latency:.1f}ms (threshold {SLOW_QUERY_THRESHOLD_MS}ms): {request.prompt!r}")
     return PromptResponse(
         response=data["response"],
         cached=False,

@@ -201,6 +201,57 @@ def test_cache_miss_llm_error_returns_502(api_client, monkeypatch):
     assert response.json() == {"error": {"code": 502, "message": "llm call failed"}}
 
 
+def test_slow_llm_call_logs_warning_above_threshold(api_client, monkeypatch, capsys):
+    import json
+
+    import app.main as main_module
+
+    monkeypatch.setattr(main_module, "SLOW_QUERY_THRESHOLD_MS", 0)
+
+    async def fake_send_and_wait(topic, value):
+        data = json.loads(value.decode())
+        correlation_id = data["correlation_id"]
+        future = main_module.pending_requests.get(correlation_id)
+        if future and not future.done():
+            future.set_result(
+                {"correlation_id": correlation_id, "prompt": data["prompt"], "response": "slow answer"}
+            )
+
+    monkeypatch.setattr(main_module.producer, "send_and_wait", fake_send_and_wait)
+
+    response = api_client.post("/query", json={"prompt": "slow uncached prompt"})
+    assert response.status_code == 200
+
+    captured = capsys.readouterr()
+    assert "[slow-query]" in captured.out
+    assert "slow uncached prompt" in captured.out
+
+
+def test_fast_llm_call_does_not_log_slow_query_warning(api_client, monkeypatch, capsys):
+    import json
+
+    import app.main as main_module
+
+    monkeypatch.setattr(main_module, "SLOW_QUERY_THRESHOLD_MS", 60_000)
+
+    async def fake_send_and_wait(topic, value):
+        data = json.loads(value.decode())
+        correlation_id = data["correlation_id"]
+        future = main_module.pending_requests.get(correlation_id)
+        if future and not future.done():
+            future.set_result(
+                {"correlation_id": correlation_id, "prompt": data["prompt"], "response": "fast answer"}
+            )
+
+    monkeypatch.setattr(main_module.producer, "send_and_wait", fake_send_and_wait)
+
+    response = api_client.post("/query", json={"prompt": "fast uncached prompt"})
+    assert response.status_code == 200
+
+    captured = capsys.readouterr()
+    assert "[slow-query]" not in captured.out
+
+
 def test_query_honors_timeout_override_on_cache_miss(api_client):
     import time
 
