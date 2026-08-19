@@ -107,7 +107,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [ ] Documented + tested fallback behavior when Redis is unavailable (fail open vs closed)
 - [ ] Graceful recovery when the FAISS index file is missing/corrupted on startup
 - [ ] Ensure GROQ_API_KEY and other secrets are never logged
-- [ ] Timeout + circuit breaker around Groq LLM calls
+- [x] Timeout + circuit breaker around Groq LLM calls (Day 12, 2026-08-19)
 - [ ] Input sanitization against control chars/ANSI escapes leaking into logs
 - [x] Non-root user in the Docker image (Day 9, 2026-08-11)
 - [ ] Dependency vulnerability scan in CI (pip-audit)
