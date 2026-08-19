@@ -210,6 +210,30 @@ def test_get_stats_reports_redis_key_count(isolated_cache):
     assert stats["redis_key_count"] == 2
 
 
+def test_get_prompt_category_matches_adaptive_threshold_tiers():
+    assert cache.get_prompt_category("Who invented the telephone?") == "factual"
+    assert cache.get_prompt_category("Define entropy") == "definition"
+    assert cache.get_prompt_category("Explain how neural networks work") == "explanation"
+    assert cache.get_prompt_category("Random unrelated statement") == "default"
+
+
+def test_get_stats_reports_category_breakdown(isolated_cache):
+    cache.search_cache("Who invented the telephone?")
+    cache.search_cache("Define entropy")
+    cache.search_cache("Explain how neural networks work")
+    cache.search_cache("Random unrelated statement")
+    cache.search_cache("What year did the war end?")
+
+    stats = cache.get_stats()
+
+    assert stats["category_counts"] == {
+        "factual": 2,
+        "definition": 1,
+        "explanation": 1,
+        "default": 1,
+    }
+
+
 def test_isolated_cache_state_does_not_leak_between_tests(isolated_cache):
     assert cache.index.ntotal == 0
     assert cache.prompt_store == []

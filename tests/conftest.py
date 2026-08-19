@@ -114,6 +114,7 @@ def isolated_cache(monkeypatch):
             "cache_misses": 0,
             "total_cached_latency_ms": 0.0,
             "total_llm_latency_ms": 0.0,
+            "category_counts": {"factual": 0, "definition": 0, "explanation": 0, "default": 0},
         },
     )
     return fake_redis

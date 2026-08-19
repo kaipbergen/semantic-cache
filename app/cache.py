@@ -39,6 +39,7 @@ stats = {
     "cache_misses": 0,
     "total_cached_latency_ms": 0.0,
     "total_llm_latency_ms": 0.0,
+    "category_counts": {"factual": 0, "definition": 0, "explanation": 0, "default": 0},
 }
 
 def _load_index():
@@ -127,32 +128,42 @@ def get_ttl(prompt: str) -> int:
         return CACHE_TTL_LONG
     return CACHE_TTL_SHORT
 
-def get_adaptive_threshold(prompt: str) -> float:
+_CATEGORY_THRESHOLDS = {
+    "factual": 0.90,
+    "definition": 0.82,
+    "explanation": 0.76,
+    "default": 0.82,
+}
+
+def get_prompt_category(prompt: str) -> str:
     prompt_lower = prompt.lower()
-    
+
     # Factual questions - high precision needed
     factual_patterns = ["capital", "who invented", "when was", "how many", "what year", "speed of"]
     if any(p in prompt_lower for p in factual_patterns):
-        return 0.90
-    
+        return "factual"
+
     # Definition questions - medium threshold
     definition_patterns = ["what is", "what are", "define", "meaning of"]
     if any(p in prompt_lower for p in definition_patterns):
-        return 0.82
-    
+        return "definition"
+
     # Explanation questions - lower threshold
     explanation_patterns = ["explain", "describe", "tell me about", "how does", "how do"]
     if any(p in prompt_lower for p in explanation_patterns):
-        return 0.76
-    
-    # Default
-    return 0.82
+        return "explanation"
+
+    return "default"
+
+def get_adaptive_threshold(prompt: str) -> float:
+    return _CATEGORY_THRESHOLDS[get_prompt_category(prompt)]
 
 def search_cache(prompt: str):
     """Returns (response, similarity, reason). `reason` explains a miss
     ("empty_cache", "no_candidates", "expired", "below_threshold") or marks
     a hit ("hit")."""
     stats["total_requests"] += 1
+    stats["category_counts"][get_prompt_category(prompt)] += 1
     if index.ntotal == 0:
         stats["cache_misses"] += 1
         return None, None, "empty_cache"
@@ -269,4 +280,5 @@ def get_stats() -> dict:
         "index_dimension": dimension,
         "index_vectors_bytes": index.ntotal * dimension * 4,
         "redis_key_count": redis_client.dbsize(),
+        "category_counts": dict(stats["category_counts"]),
     }
