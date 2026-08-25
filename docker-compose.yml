@@ -7,7 +7,7 @@ services:
       - .env
     depends_on:
       redis:
-        condition: service_started
+        condition: service_healthy
       kafka:
         condition: service_healthy
     volumes:
@@ -22,7 +22,7 @@ services:
       - .env
     depends_on:
       redis:
-        condition: service_started
+        condition: service_healthy
       kafka:
         condition: service_healthy
     volumes:
@@ -35,6 +35,11 @@ services:
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.1
