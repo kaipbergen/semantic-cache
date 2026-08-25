@@ -93,7 +93,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [ ] Multi-stage Dockerfile separating build and runtime layers to shrink image size
 - [x] docker-compose healthchecks for Redis and Kafka dependencies (Day 13, 2026-08-25)
 - [x] .env.example documenting all configuration variables (Day 9, 2026-08-11)
-- [ ] CONTRIBUTING.md
+- [x] CONTRIBUTING.md (Day 13, 2026-08-25)
 - [ ] Kubernetes manifests (Deployment + Service + ConfigMap) mirroring litekv's k8s/ setup
 - [ ] Pre-commit hooks (black + ruff)
 - [ ] Makefile with common dev commands (run, test, lint, docker-up)
@@ -172,3 +172,8 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
   dedicated scoped effort (likely alongside reworking eviction/compaction
   to not rely on positional correspondence) rather than a single-item
   change alongside other work.
+- Day 13 (2026-08-25): Checked off "CONTRIBUTING.md" as already-done —
+  it was added in commits a81067b/7417ce4 (setup instructions, test
+  command, troubleshooting, PR guidelines) but the roadmap line was never
+  updated. Verified its content actually satisfies the item before
+  checking it off, no new work needed.
