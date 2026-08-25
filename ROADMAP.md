@@ -103,7 +103,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [ ] .dockerignore file to shrink build context
 
 ## Security & reliability
-- [ ] Max prompt length enforced before embedding to bound compute cost
+- [x] Max prompt length enforced before embedding to bound compute cost (Day 13, 2026-08-25)
 - [ ] Documented + tested fallback behavior when Redis is unavailable (fail open vs closed)
 - [ ] Graceful recovery when the FAISS index file is missing/corrupted on startup
 - [ ] Ensure GROQ_API_KEY and other secrets are never logged

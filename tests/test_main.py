@@ -57,6 +57,16 @@ def test_seed_cache_rejects_empty_prompt(api_client):
     assert response.status_code == 400
 
 
+def test_seed_cache_rejects_prompt_over_max_length(api_client):
+    import app.main as main_module
+
+    response = api_client.post(
+        "/cache/seed",
+        json={"prompt": "a" * (main_module.MAX_PROMPT_LENGTH + 1), "response": "x"},
+    )
+    assert response.status_code == 413
+
+
 def test_list_cache_entries_returns_seeded_prompts_with_ttl(api_client):
     api_client.post("/cache/seed", json={"prompt": "What is the capital of France?", "response": "Paris"})
     api_client.post("/cache/seed", json={"prompt": "Explain gravity", "response": "It pulls things down"})
@@ -505,6 +515,16 @@ def test_query_batch_rejects_empty_prompt_list(api_client):
 def test_query_batch_rejects_blank_prompt_in_list(api_client):
     response = api_client.post("/query/batch", json={"prompts": ["valid", "   "]})
     assert response.status_code == 400
+
+
+def test_query_batch_rejects_prompt_over_max_length(api_client):
+    import app.main as main_module
+
+    response = api_client.post(
+        "/query/batch",
+        json={"prompts": ["valid", "a" * (main_module.MAX_PROMPT_LENGTH + 1)]},
+    )
+    assert response.status_code == 413
 
 
 def test_query_batch_rejects_over_max_batch_size(api_client, monkeypatch):

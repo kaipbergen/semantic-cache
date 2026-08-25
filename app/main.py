@@ -359,6 +359,11 @@ def query_batch(request: BatchQueryRequest):
     for prompt in request.prompts:
         if not prompt.strip():
             raise HTTPException(status_code=400, detail="prompt must not be empty")
+        if len(prompt) > MAX_PROMPT_LENGTH:
+            raise HTTPException(
+                status_code=413,
+                detail=f"prompt exceeds max length of {MAX_PROMPT_LENGTH} characters",
+            )
         cached_response, similarity, cache_reason = search_cache(prompt)
         results.append(
             BatchQueryResult(
@@ -381,6 +386,11 @@ class SeedRequest(BaseModel):
 def seed_cache(request: SeedRequest):
     if not request.prompt.strip():
         raise HTTPException(status_code=400, detail="prompt must not be empty")
+    if len(request.prompt) > MAX_PROMPT_LENGTH:
+        raise HTTPException(
+            status_code=413,
+            detail=f"prompt exceeds max length of {MAX_PROMPT_LENGTH} characters",
+        )
     store_cache(request.prompt, request.response)
     return {"message": "Cache entry seeded", "prompt": request.prompt}
 
