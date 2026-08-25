@@ -99,7 +99,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [ ] Makefile with common dev commands (run, test, lint, docker-up)
 - [ ] requirements-dev.txt separating dev/test deps from runtime deps
 - [x] LICENSE file (MIT) if missing (Day 13, 2026-08-25)
-- [ ] CODEOWNERS file
+- [x] CODEOWNERS file (Day 13, 2026-08-25)
 - [ ] .dockerignore file to shrink build context
 
 ## Security & reliability
