@@ -100,7 +100,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [x] requirements-dev.txt separating dev/test deps from runtime deps (Day 14, 2026-08-30)
 - [x] LICENSE file (MIT) if missing (Day 13, 2026-08-25)
 - [x] CODEOWNERS file (Day 13, 2026-08-25)
-- [ ] .dockerignore file to shrink build context
+- [x] .dockerignore file to shrink build context (Day 14, 2026-08-30)
 
 ## Security & reliability
 - [x] Max prompt length enforced before embedding to bound compute cost (Day 13, 2026-08-25)
