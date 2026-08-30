@@ -68,6 +68,49 @@ class JSONFormatter(logging.Formatter):
         return json.dumps(payload, default=str)
 
 
+_SECRET_ENV_NAME_RE = re.compile(r"(KEY|SECRET|PASSWORD|TOKEN|CREDENTIAL)", re.IGNORECASE)
+_MIN_REDACTED_SECRET_LENGTH = 6
+_REDACTED_PLACEHOLDER = "***REDACTED***"
+
+
+def _discover_secrets() -> list[str]:
+    """Any env var whose name looks like it holds a credential (GROQ_API_KEY,
+    API_KEY, ...) is treated as a value that must never appear in logs
+    verbatim, without needing to hardcode each var by name."""
+    return [
+        value
+        for name, value in os.environ.items()
+        if value and len(value) >= _MIN_REDACTED_SECRET_LENGTH and _SECRET_ENV_NAME_RE.search(name)
+    ]
+
+
+def _redact(text: str, secrets: list[str]) -> str:
+    for secret in secrets:
+        if secret in text:
+            text = text.replace(secret, _REDACTED_PLACEHOLDER)
+    return text
+
+
+class SecretRedactionFilter(logging.Filter):
+    def __init__(self, secrets: list[str]):
+        super().__init__()
+        self._secrets = [s for s in secrets if s]
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if not self._secrets:
+            return True
+
+        record.msg = _redact(record.getMessage(), self._secrets)
+        record.args = ()
+
+        for key, value in list(record.__dict__.items()):
+            if key in _RESERVED_RECORD_ATTRS or key == "request_id" or not isinstance(value, str):
+                continue
+            record.__dict__[key] = _redact(value, self._secrets)
+
+        return True
+
+
 _configured = False
 
 
@@ -80,6 +123,7 @@ def configure_logging(level: str | None = None) -> None:
     handler = _StdoutHandler()
     handler.setFormatter(JSONFormatter())
     handler.addFilter(RequestIDFilter())
+    handler.addFilter(SecretRedactionFilter(_discover_secrets()))
 
     root = logging.getLogger()
     root.setLevel(log_level)

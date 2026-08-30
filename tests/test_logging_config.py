@@ -1,7 +1,14 @@
 import json
 import logging
 
-from app.logging_config import JSONFormatter, RequestIDFilter, request_id_var, sanitize_for_log
+from app.logging_config import (
+    JSONFormatter,
+    RequestIDFilter,
+    SecretRedactionFilter,
+    _discover_secrets,
+    request_id_var,
+    sanitize_for_log,
+)
 
 
 def _make_record(**kwargs):
@@ -89,3 +96,47 @@ def test_sanitize_for_log_truncates_long_input():
 
 def test_sanitize_for_log_coerces_non_string_input():
     assert sanitize_for_log(12345) == "12345"
+
+
+def test_secret_redaction_filter_redacts_message_containing_secret():
+    record = _make_record(msg="calling groq with key sk-super-secret-value", args=())
+    filt = SecretRedactionFilter(["sk-super-secret-value"])
+
+    assert filt.filter(record) is True
+    assert "sk-super-secret-value" not in record.getMessage()
+    assert "***REDACTED***" in record.getMessage()
+
+
+def test_secret_redaction_filter_redacts_extra_fields():
+    record = _make_record(request_id=None, error="auth failed for token abc123secret")
+    filt = SecretRedactionFilter(["abc123secret"])
+
+    filt.filter(record)
+
+    assert "abc123secret" not in record.error
+    assert record.error == "auth failed for token ***REDACTED***"
+
+
+def test_secret_redaction_filter_noop_when_no_secrets_configured():
+    record = _make_record()
+    filt = SecretRedactionFilter([])
+
+    assert filt.filter(record) is True
+    assert record.getMessage() == "hello world"
+
+
+def test_secret_redaction_filter_ignores_falsy_secrets():
+    filt = SecretRedactionFilter(["", None, "real-secret-value"])
+    assert filt._secrets == ["real-secret-value"]
+
+
+def test_discover_secrets_picks_up_key_like_env_vars(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "sk-discovered-secret")
+    monkeypatch.setenv("SOME_UNRELATED_VAR", "not-a-secret")
+    monkeypatch.setenv("SHORT_TOKEN", "abc")
+
+    secrets = _discover_secrets()
+
+    assert "sk-discovered-secret" in secrets
+    assert "not-a-secret" not in secrets
+    assert "abc" not in secrets
