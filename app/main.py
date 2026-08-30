@@ -22,7 +22,7 @@ from app.kafka_client import (
     send_with_retry,
     start_with_retry,
 )
-from app.logging_config import configure_logging, get_logger, request_id_var
+from app.logging_config import configure_logging, get_logger, request_id_var, sanitize_for_log
 
 configure_logging()
 logger = get_logger(__name__)
@@ -335,7 +335,7 @@ async def query(
             "Slow LLM call: %.1fms (threshold %.1fms)",
             latency,
             SLOW_QUERY_THRESHOLD_MS,
-            extra={"prompt": request.prompt, "latency_ms": round(latency, 1)},
+            extra={"prompt": sanitize_for_log(request.prompt), "latency_ms": round(latency, 1)},
         )
     return PromptResponse(
         response=data["response"],

@@ -262,6 +262,38 @@ def test_slow_llm_call_logs_warning_above_threshold(api_client, monkeypatch, cap
     assert slow_query_logs[0]["request_id"]
 
 
+def test_slow_llm_call_log_sanitizes_control_chars_in_prompt(api_client, monkeypatch, capsys):
+    import json
+
+    import app.main as main_module
+
+    monkeypatch.setattr(main_module, "SLOW_QUERY_THRESHOLD_MS", 0)
+    malicious_prompt = "hello\x1b[31m\ninjected line"
+
+    async def fake_send_and_wait(topic, value):
+        data = json.loads(value.decode())
+        correlation_id = data["correlation_id"]
+        future = main_module.pending_requests.get(correlation_id)
+        if future and not future.done():
+            future.set_result(
+                {"correlation_id": correlation_id, "prompt": data["prompt"], "response": "slow answer"}
+            )
+
+    monkeypatch.setattr(main_module.producer, "send_and_wait", fake_send_and_wait)
+
+    response = api_client.post("/query", json={"prompt": malicious_prompt})
+    assert response.status_code == 200
+
+    captured = capsys.readouterr()
+    log_lines = [json.loads(line) for line in captured.out.splitlines() if line.strip().startswith("{")]
+    slow_query_logs = [line for line in log_lines if "Slow LLM call" in line["message"]]
+    assert len(slow_query_logs) == 1
+    logged_prompt = slow_query_logs[0]["extra"]["prompt"]
+    assert "\x1b" not in logged_prompt
+    assert "\n" not in logged_prompt
+    assert logged_prompt == "hello\\x1b[31m\\x0ainjected line"
+
+
 def test_fast_llm_call_does_not_log_slow_query_warning(api_client, monkeypatch, capsys):
     import json
 

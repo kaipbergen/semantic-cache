@@ -1,7 +1,7 @@
 import json
 import logging
 
-from app.logging_config import JSONFormatter, RequestIDFilter, request_id_var
+from app.logging_config import JSONFormatter, RequestIDFilter, request_id_var, sanitize_for_log
 
 
 def _make_record(**kwargs):
@@ -58,3 +58,34 @@ def test_request_id_filter_defaults_to_none_outside_request_context():
     record = _make_record()
     RequestIDFilter().filter(record)
     assert record.request_id is None
+
+
+def test_sanitize_for_log_leaves_plain_text_untouched():
+    assert sanitize_for_log("just a normal prompt") == "just a normal prompt"
+
+
+def test_sanitize_for_log_escapes_ansi_escape_sequences():
+    malicious = "\x1b[31mFAKE ERROR\x1b[0m"
+    sanitized = sanitize_for_log(malicious)
+
+    assert "\x1b" not in sanitized
+    assert "\\x1b[31mFAKE ERROR\\x1b[0m" == sanitized
+
+
+def test_sanitize_for_log_escapes_crlf_to_block_log_line_injection():
+    injected = "innocent prompt\nlevel=ERROR msg=fake injected line"
+    sanitized = sanitize_for_log(injected)
+
+    assert "\n" not in sanitized
+    assert sanitized == "innocent prompt\\x0alevel=ERROR msg=fake injected line"
+
+
+def test_sanitize_for_log_truncates_long_input():
+    sanitized = sanitize_for_log("a" * 1000, max_length=50)
+
+    assert sanitized.startswith("a" * 50)
+    assert "truncated" in sanitized
+
+
+def test_sanitize_for_log_coerces_non_string_input():
+    assert sanitize_for_log(12345) == "12345"

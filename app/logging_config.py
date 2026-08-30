@@ -1,10 +1,27 @@
 import json
 import logging
 import os
+import re
 import sys
 from contextvars import ContextVar
 
 request_id_var: ContextVar[str | None] = ContextVar("request_id", default=None)
+
+_CONTROL_CHAR_RE = re.compile(r"[\x00-\x1f\x7f]")
+
+
+def sanitize_for_log(value, max_length: int = 500) -> str:
+    """Neutralize control characters (including ANSI/CSI escape sequences and
+    CR/LF) in untrusted, user-controlled strings before they reach a log
+    record, so a crafted prompt can't inject fake log lines or terminal
+    escape codes into whatever ends up rendering the logs. Also bounds the
+    length so one oversized prompt can't blow up log volume."""
+    text = value if isinstance(value, str) else str(value)
+    sanitized = _CONTROL_CHAR_RE.sub(lambda m: f"\\x{ord(m.group()):02x}", text)
+    if len(sanitized) > max_length:
+        omitted = len(sanitized) - max_length
+        sanitized = f"{sanitized[:max_length]}...<{omitted} more chars truncated>"
+    return sanitized
 
 _RESERVED_RECORD_ATTRS = set(logging.makeLogRecord({}).__dict__) | {"message", "asctime"}
 
