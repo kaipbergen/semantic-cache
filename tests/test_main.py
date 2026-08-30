@@ -254,8 +254,12 @@ def test_slow_llm_call_logs_warning_above_threshold(api_client, monkeypatch, cap
     assert response.status_code == 200
 
     captured = capsys.readouterr()
-    assert "[slow-query]" in captured.out
-    assert "slow uncached prompt" in captured.out
+    log_lines = [json.loads(line) for line in captured.out.splitlines() if line.strip().startswith("{")]
+    slow_query_logs = [line for line in log_lines if "Slow LLM call" in line["message"]]
+    assert len(slow_query_logs) == 1
+    assert slow_query_logs[0]["level"] == "WARNING"
+    assert slow_query_logs[0]["extra"]["prompt"] == "slow uncached prompt"
+    assert slow_query_logs[0]["request_id"]
 
 
 def test_fast_llm_call_does_not_log_slow_query_warning(api_client, monkeypatch, capsys):

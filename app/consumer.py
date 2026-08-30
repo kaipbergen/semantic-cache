@@ -15,6 +15,10 @@ from app.kafka_client import (
     send_with_retry,
     start_with_retry,
 )
+from app.logging_config import configure_logging, get_logger, request_id_var
+
+configure_logging()
+logger = get_logger(__name__)
 
 # Lightweight client here on purpose: this worker only needs Redis for job
 # status, not the bi-encoder/cross-encoder/FAISS stack from app.cache. The
@@ -41,7 +45,13 @@ async def _call_llm_with_retry(prompt: str) -> str:
             if attempt == LLM_CALL_MAX_ATTEMPTS:
                 break
             delay = LLM_CALL_RETRY_BASE_DELAY * (2 ** (attempt - 1))
-            print(f"[consumer] call_llm failed ({attempt}/{LLM_CALL_MAX_ATTEMPTS}): {exc} - retrying in {delay}s")
+            logger.warning(
+                "call_llm failed (%d/%d): %s - retrying in %ss",
+                attempt,
+                LLM_CALL_MAX_ATTEMPTS,
+                exc,
+                delay,
+            )
             await asyncio.sleep(delay)
     raise last_exc
 
@@ -55,38 +65,44 @@ async def process(producer: AIOKafkaProducer, raw: bytes):
         # A malformed payload can never succeed on retry, so log and drop it
         # rather than raising - an uncaught exception here would crash the
         # whole consume loop and stop all other messages from being processed.
-        print(f"[consumer] skipping malformed message ({exc.__class__.__name__}: {exc}): {raw!r}")
+        logger.error(
+            "Skipping malformed message (%s: %s)", exc.__class__.__name__, exc, extra={"raw": repr(raw)}
+        )
         return
 
+    token = request_id_var.set(correlation_id)
     try:
-        response = await _call_llm_with_retry(prompt)
-        redis_client.setex(
-            f"status:{correlation_id}",
-            STATUS_TTL_SECONDS,
-            json.dumps({"status": "done", "response": response}),
-        )
-        payload = {"correlation_id": correlation_id, "prompt": prompt, "response": response}
-    except Exception as exc:
-        redis_client.setex(
-            f"status:{correlation_id}",
-            STATUS_TTL_SECONDS,
-            json.dumps({"status": "error", "error": str(exc)}),
-        )
-        payload = {"correlation_id": correlation_id, "prompt": prompt, "error": str(exc)}
-        await send_with_retry(
-            producer,
-            LLM_REQUESTS_DLQ_TOPIC,
-            json.dumps(
-                {
-                    "correlation_id": correlation_id,
-                    "prompt": prompt,
-                    "error": str(exc),
-                    "attempts": LLM_CALL_MAX_ATTEMPTS,
-                }
-            ).encode(),
-        )
+        try:
+            response = await _call_llm_with_retry(prompt)
+            redis_client.setex(
+                f"status:{correlation_id}",
+                STATUS_TTL_SECONDS,
+                json.dumps({"status": "done", "response": response}),
+            )
+            payload = {"correlation_id": correlation_id, "prompt": prompt, "response": response}
+        except Exception as exc:
+            redis_client.setex(
+                f"status:{correlation_id}",
+                STATUS_TTL_SECONDS,
+                json.dumps({"status": "error", "error": str(exc)}),
+            )
+            payload = {"correlation_id": correlation_id, "prompt": prompt, "error": str(exc)}
+            await send_with_retry(
+                producer,
+                LLM_REQUESTS_DLQ_TOPIC,
+                json.dumps(
+                    {
+                        "correlation_id": correlation_id,
+                        "prompt": prompt,
+                        "error": str(exc),
+                        "attempts": LLM_CALL_MAX_ATTEMPTS,
+                    }
+                ).encode(),
+            )
 
-    await send_with_retry(producer, LLM_RESPONSES_TOPIC, json.dumps(payload).encode())
+        await send_with_retry(producer, LLM_RESPONSES_TOPIC, json.dumps(payload).encode())
+    finally:
+        request_id_var.reset(token)
 
 
 async def _consume_loop(consumer, producer, shutdown_event: asyncio.Event, poll_timeout: float = 1.0):
@@ -125,10 +141,10 @@ async def main():
             # add_signal_handler is unsupported on some platforms (e.g. Windows).
             pass
 
-    print(f"[consumer] listening on '{LLM_REQUESTS_TOPIC}'")
+    logger.info("Listening on '%s'", LLM_REQUESTS_TOPIC)
     try:
         await _consume_loop(consumer, producer, shutdown_event, CONSUMER_SHUTDOWN_POLL_SECONDS)
-        print("[consumer] shutdown signal received, drained in-flight work - exiting")
+        logger.info("Shutdown signal received, drained in-flight work - exiting")
     finally:
         await consumer.stop()
         await producer.stop()

@@ -22,6 +22,10 @@ from app.kafka_client import (
     send_with_retry,
     start_with_retry,
 )
+from app.logging_config import configure_logging, get_logger, request_id_var
+
+configure_logging()
+logger = get_logger(__name__)
 
 APP_VERSION = os.getenv("APP_VERSION", "0.1.0")
 _START_TIME = time.time()
@@ -122,7 +126,7 @@ async def consume_responses():
 def _prune_once() -> int:
     removed = compact_index()
     if removed:
-        print(f"Pruned {removed} expired cache entries")
+        logger.info("Pruned %d expired cache entries", removed)
     return removed
 
 
@@ -152,7 +156,11 @@ app = FastAPI(title="Semantic Cache API", lifespan=lifespan)
 class RequestIDMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
-        response = await call_next(request)
+        token = request_id_var.set(request_id)
+        try:
+            response = await call_next(request)
+        finally:
+            request_id_var.reset(token)
         response.headers["X-Request-ID"] = request_id
         return response
 
@@ -323,7 +331,12 @@ async def query(
     latency = (time.time() - start) * 1000
     stats["total_llm_latency_ms"] += latency
     if latency > SLOW_QUERY_THRESHOLD_MS:
-        print(f"[slow-query] LLM call took {latency:.1f}ms (threshold {SLOW_QUERY_THRESHOLD_MS}ms): {request.prompt!r}")
+        logger.warning(
+            "Slow LLM call: %.1fms (threshold %.1fms)",
+            latency,
+            SLOW_QUERY_THRESHOLD_MS,
+            extra={"prompt": request.prompt, "latency_ms": round(latency, 1)},
+        )
     return PromptResponse(
         response=data["response"],
         cached=False,

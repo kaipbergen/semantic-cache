@@ -5,6 +5,11 @@ from aiokafka import AIOKafkaConsumer, TopicPartition
 from aiokafka.admin import AIOKafkaAdminClient
 from aiokafka.errors import KafkaError
 
+from app.logging_config import configure_logging, get_logger
+
+configure_logging()
+logger = get_logger(__name__)
+
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
 LLM_REQUESTS_TOPIC = "llm-requests"
 LLM_RESPONSES_TOPIC = "llm-responses"
@@ -17,10 +22,10 @@ async def start_with_retry(client, name: str, retries: int = 15, delay: float = 
     for attempt in range(1, retries + 1):
         try:
             await client.start()
-            print(f"[kafka] {name} connected")
+            logger.info("%s connected", name)
             return
         except Exception as exc:
-            print(f"[kafka] {name} not ready ({attempt}/{retries}): {exc}")
+            logger.warning("%s not ready (%d/%d): %s", name, attempt, retries, exc)
             await asyncio.sleep(delay)
     raise RuntimeError(f"Could not start {name} after {retries} attempts")
 
@@ -36,7 +41,9 @@ async def send_with_retry(producer, topic: str, value: bytes, retries: int = 5, 
             if attempt == retries:
                 raise
             delay = base_delay * (2 ** (attempt - 1))
-            print(f"[kafka] send to '{topic}' failed ({attempt}/{retries}): {exc} - retrying in {delay}s")
+            logger.warning(
+                "Send to '%s' failed (%d/%d): %s - retrying in %ss", topic, attempt, retries, exc, delay
+            )
             await asyncio.sleep(delay)
 
 

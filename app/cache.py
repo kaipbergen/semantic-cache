@@ -9,7 +9,11 @@ import pickle
 from sentence_transformers import SentenceTransformer, CrossEncoder
 from dotenv import load_dotenv
 
+from app.logging_config import configure_logging, get_logger
+
 load_dotenv()
+configure_logging()
+logger = get_logger(__name__)
 
 SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", 0.85))
 CROSS_ENCODER_THRESHOLD = float(os.getenv("CROSS_ENCODER_THRESHOLD", 0.5))
@@ -54,9 +58,10 @@ def _load_index():
             # not comparable to embeddings from the current one (different
             # geometry, possibly different dimension) - start fresh rather
             # than serving similarity scores computed against stale vectors.
-            print(
-                f"Index was built with bi-encoder '{stored_model}', current is "
-                f"'{BI_ENCODER_MODEL}' - discarding stale index"
+            logger.warning(
+                "Index was built with bi-encoder '%s', current is '%s' - discarding stale index",
+                stored_model,
+                BI_ENCODER_MODEL,
             )
             return faiss.IndexFlatIP(dimension), []
         idx = faiss.read_index(INDEX_PATH)
@@ -67,12 +72,13 @@ def _load_index():
             # leave their entry counts out of sync, which corrupts the
             # positional correspondence search_cache/compact_index rely on -
             # safer to start fresh than to serve mismatched prompts.
-            print(
-                f"Index/prompt_store size mismatch ({idx.ntotal} vs {len(store)} entries) - "
-                "discarding corrupted index"
+            logger.warning(
+                "Index/prompt_store size mismatch (%d vs %d entries) - discarding corrupted index",
+                idx.ntotal,
+                len(store),
             )
             return faiss.IndexFlatIP(dimension), []
-        print(f"Loaded FAISS index with {idx.ntotal} entries")
+        logger.info("Loaded FAISS index with %d entries", idx.ntotal)
         return idx, store
     return faiss.IndexFlatIP(dimension), []
 

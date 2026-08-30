@@ -76,7 +76,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 
 ## Observability
 - [ ] Prometheus /metrics endpoint (request count, hit rate, latency histograms)
-- [ ] Structured JSON logging with request correlation IDs
+- [x] Structured JSON logging with request correlation IDs (Day 14, 2026-08-30)
 - [x] /stats breakdown by adaptive-threshold category (factual/definition/explanation) (Day 12, 2026-08-19)
 - [x] Slow-query logging for LLM calls exceeding a configurable latency threshold (Day 12, 2026-08-19)
 - [ ] Grafana dashboard JSON for the Prometheus metrics
