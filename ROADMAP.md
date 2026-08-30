@@ -97,7 +97,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [ ] Kubernetes manifests (Deployment + Service + ConfigMap) mirroring litekv's k8s/ setup
 - [ ] Pre-commit hooks (black + ruff)
 - [ ] Makefile with common dev commands (run, test, lint, docker-up)
-- [ ] requirements-dev.txt separating dev/test deps from runtime deps
+- [x] requirements-dev.txt separating dev/test deps from runtime deps (Day 14, 2026-08-30)
 - [x] LICENSE file (MIT) if missing (Day 13, 2026-08-25)
 - [x] CODEOWNERS file (Day 13, 2026-08-25)
 - [ ] .dockerignore file to shrink build context

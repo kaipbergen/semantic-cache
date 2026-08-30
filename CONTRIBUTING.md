@@ -8,7 +8,7 @@ Thanks for your interest in improving semantic-cache.
 git clone https://github.com/kaipbergen/semantic-cache
 cd semantic-cache
 python3 -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 cp .env.example .env
 ```
 
