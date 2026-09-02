@@ -43,6 +43,7 @@ CONSUMER_LAG_TIMEOUT_SECONDS = float(os.getenv("CONSUMER_LAG_TIMEOUT_SECONDS", 5
 COMPACTION_INTERVAL_SECONDS = float(os.getenv("COMPACTION_INTERVAL_SECONDS", 0))
 SLOW_QUERY_THRESHOLD_MS = float(os.getenv("SLOW_QUERY_THRESHOLD_MS", 5000))
 API_KEY = os.getenv("API_KEY")
+REQUEST_LOG_VERBOSITY = os.getenv("REQUEST_LOG_VERBOSITY", "basic").lower()
 API_KEY_EXEMPT_PATHS = {"/health", "/health/deep", "/docs", "/openapi.json", "/redoc", "/metrics"}
 CORS_ALLOWED_ORIGINS = [
     origin.strip() for origin in os.getenv("CORS_ALLOWED_ORIGINS", "*").split(",") if origin.strip()
@@ -177,7 +178,43 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    """Logs one line per request. REQUEST_LOG_VERBOSITY controls how much:
+    "off" disables it, "basic" (default) logs method/path/status/duration,
+    "full" adds query params and client IP. Runs inside RequestIDMiddleware
+    so its log line carries the same request_id as everything else."""
+
+    async def dispatch(self, request: Request, call_next):
+        if REQUEST_LOG_VERBOSITY == "off":
+            return await call_next(request)
+
+        start = time.time()
+        response = await call_next(request)
+        duration_ms = (time.time() - start) * 1000
+
+        extra = {
+            "method": request.method,
+            "path": request.url.path,
+            "status_code": response.status_code,
+            "duration_ms": round(duration_ms, 2),
+        }
+        if REQUEST_LOG_VERBOSITY == "full":
+            extra["query_string"] = sanitize_for_log(request.url.query)
+            extra["client_ip"] = request.client.host if request.client else None
+
+        logger.info(
+            "%s %s -> %d (%.2fms)",
+            request.method,
+            request.url.path,
+            response.status_code,
+            duration_ms,
+            extra=extra,
+        )
+        return response
+
+
 app.add_middleware(APIKeyMiddleware)
+app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(RequestIDMiddleware)
 app.add_middleware(
     CORSMiddleware,

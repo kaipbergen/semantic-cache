@@ -80,7 +80,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [x] /stats breakdown by adaptive-threshold category (factual/definition/explanation) (Day 12, 2026-08-19)
 - [x] Slow-query logging for LLM calls exceeding a configurable latency threshold (Day 12, 2026-08-19)
 - [ ] Grafana dashboard JSON for the Prometheus metrics
-- [ ] Request/response logging middleware with configurable verbosity
+- [x] Request/response logging middleware with configurable verbosity (Day 15, 2026-09-02)
 - [ ] /stats historical rollup (hourly buckets) instead of only cumulative counters
 - [ ] Sentry or similar error-tracking integration hook (optional, env-gated)
 - [x] Cache hit/miss reason exposed in response (e.g. "below_threshold" vs "no_candidates") (Day 9, 2026-08-11)
