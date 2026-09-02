@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -23,6 +23,7 @@ from app.kafka_client import (
     start_with_retry,
 )
 from app.logging_config import configure_logging, get_logger, request_id_var, sanitize_for_log
+from app.metrics import CONTENT_TYPE_LATEST, REQUEST_LATENCY_SECONDS, render_latest
 
 configure_logging()
 logger = get_logger(__name__)
@@ -42,7 +43,7 @@ CONSUMER_LAG_TIMEOUT_SECONDS = float(os.getenv("CONSUMER_LAG_TIMEOUT_SECONDS", 5
 COMPACTION_INTERVAL_SECONDS = float(os.getenv("COMPACTION_INTERVAL_SECONDS", 0))
 SLOW_QUERY_THRESHOLD_MS = float(os.getenv("SLOW_QUERY_THRESHOLD_MS", 5000))
 API_KEY = os.getenv("API_KEY")
-API_KEY_EXEMPT_PATHS = {"/health", "/health/deep", "/docs", "/openapi.json", "/redoc"}
+API_KEY_EXEMPT_PATHS = {"/health", "/health/deep", "/docs", "/openapi.json", "/redoc", "/metrics"}
 CORS_ALLOWED_ORIGINS = [
     origin.strip() for origin in os.getenv("CORS_ALLOWED_ORIGINS", "*").split(",") if origin.strip()
 ]
@@ -281,6 +282,7 @@ async def query(
     if cached_response:
         latency = (time.time() - start) * 1000
         stats["total_cached_latency_ms"] += latency
+        REQUEST_LATENCY_SECONDS.labels(cache_hit="true").observe(latency / 1000)
         return PromptResponse(
             response=cached_response,
             cached=True,
@@ -330,6 +332,7 @@ async def query(
 
     latency = (time.time() - start) * 1000
     stats["total_llm_latency_ms"] += latency
+    REQUEST_LATENCY_SECONDS.labels(cache_hit="false").observe(latency / 1000)
     if latency > SLOW_QUERY_THRESHOLD_MS:
         logger.warning(
             "Slow LLM call: %.1fms (threshold %.1fms)",
@@ -441,6 +444,11 @@ def get_job_status(job_id: str):
     if not raw:
         raise HTTPException(status_code=404, detail="Job not found")
     return json.loads(raw)
+
+
+@app.get("/metrics")
+def metrics():
+    return Response(content=render_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/stats")

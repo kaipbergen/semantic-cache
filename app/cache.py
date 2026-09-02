@@ -10,6 +10,7 @@ from sentence_transformers import SentenceTransformer, CrossEncoder
 from dotenv import load_dotenv
 
 from app.logging_config import configure_logging, get_logger
+from app.metrics import CACHE_LOOKUP_TOTAL
 
 load_dotenv()
 configure_logging()
@@ -168,6 +169,11 @@ def search_cache(prompt: str):
     """Returns (response, similarity, reason). `reason` explains a miss
     ("empty_cache", "no_candidates", "expired", "below_threshold") or marks
     a hit ("hit")."""
+    result = _search_cache_impl(prompt)
+    CACHE_LOOKUP_TOTAL.labels(reason=result[2]).inc()
+    return result
+
+def _search_cache_impl(prompt: str):
     stats["total_requests"] += 1
     stats["category_counts"][get_prompt_category(prompt)] += 1
     if index.ntotal == 0:

@@ -75,7 +75,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [x] Backpressure handling: bound pending_requests size and reject new requests when saturated (Day 11, 2026-08-16)
 
 ## Observability
-- [ ] Prometheus /metrics endpoint (request count, hit rate, latency histograms)
+- [x] Prometheus /metrics endpoint (request count, hit rate, latency histograms) (Day 15, 2026-09-02)
 - [x] Structured JSON logging with request correlation IDs (Day 14, 2026-08-30)
 - [x] /stats breakdown by adaptive-threshold category (factual/definition/explanation) (Day 12, 2026-08-19)
 - [x] Slow-query logging for LLM calls exceeding a configurable latency threshold (Day 12, 2026-08-19)
