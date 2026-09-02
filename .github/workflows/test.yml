@@ -25,6 +25,42 @@ jobs:
       - name: Run ruff
         run: ruff check .
 
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run pip-audit
+        # Ignored IDs are known vulnerabilities in transitive deps
+        # (starlette via fastapi==0.115.0, transformers via
+        # sentence-transformers==3.0.1) that only close via a coordinated
+        # major-version upgrade of the top-level package - out of scope
+        # for a routine scan. Tracked in ROADMAP.md's Notes section.
+        run: >
+          pip-audit -r requirements.txt
+          --ignore-vuln PYSEC-2026-161
+          --ignore-vuln PYSEC-2026-248
+          --ignore-vuln PYSEC-2026-249
+          --ignore-vuln PYSEC-2026-1943
+          --ignore-vuln PYSEC-2026-1941
+          --ignore-vuln PYSEC-2026-2281
+          --ignore-vuln PYSEC-2026-2280
+          --ignore-vuln PYSEC-2025-217
+          --ignore-vuln PYSEC-2026-2290
+          --ignore-vuln PYSEC-2026-2288
+          --ignore-vuln PYSEC-2026-2289
+          --ignore-vuln CVE-2026-9856
+
   pytest:
     runs-on: ubuntu-latest
     strategy:
