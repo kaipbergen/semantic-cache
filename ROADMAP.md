@@ -89,7 +89,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [x] Cache size (index.ntotal + Redis key count) exposed as a metric (Day 12, 2026-08-19)
 
 ## Deployment & devex
-- [ ] GitHub Actions CI (lint + pytest on push)
+- [x] GitHub Actions CI (lint + pytest on push) (Day 15, 2026-09-02)
 - [ ] Multi-stage Dockerfile separating build and runtime layers to shrink image size
 - [x] docker-compose healthchecks for Redis and Kafka dependencies (Day 13, 2026-08-25)
 - [x] .env.example documenting all configuration variables (Day 9, 2026-08-11)
