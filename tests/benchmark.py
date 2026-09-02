@@ -1,7 +1,8 @@
-import httpx
 import asyncio
 import time
 import uuid
+
+import httpx
 
 BASE_URL = "http://localhost:8000"
 
@@ -60,7 +61,7 @@ async def run_benchmark():
             data = response.json()
             print(f"[SEED] {query[:50]:<50} | {data['latency_ms']:.0f}ms")
 
-        print(f"\n[Phase 2] Testing semantic cache hits...")
+        print("\n[Phase 2] Testing semantic cache hits...")
         print("-" * 60)
 
         hits = 0

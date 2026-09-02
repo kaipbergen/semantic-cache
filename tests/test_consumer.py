@@ -4,8 +4,8 @@ import types
 
 import pytest
 
+from app.consumer import process
 from app.kafka_client import LLM_REQUESTS_DLQ_TOPIC, LLM_RESPONSES_TOPIC
-from app.consumer import _consume_loop, process
 
 
 class _FakeProducer:

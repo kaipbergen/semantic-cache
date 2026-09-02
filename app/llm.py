@@ -2,8 +2,8 @@ import asyncio
 import os
 import time
 
-from groq import AsyncGroq
 from dotenv import load_dotenv
+from groq import AsyncGroq
 
 load_dotenv()
 

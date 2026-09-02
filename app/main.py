@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.cache import compact_index, search_cache, store_cache, get_stats, stats, redis_client
+from app.cache import compact_index, get_stats, redis_client, search_cache, stats, store_cache
 from app.consumer import CONSUMER_GROUP_ID
 from app.kafka_client import (
     KAFKA_BOOTSTRAP_SERVERS,
@@ -505,7 +505,7 @@ async def get_cache_stats():
 
 @app.delete("/cache")
 def clear_cache():
-    from app.cache import index, prompt_store, _save_index
+    from app.cache import _save_index, index
     index.reset()
     # Reinitialize with correct dimension
     import faiss

@@ -1,13 +1,14 @@
-import faiss
-import numpy as np
-import redis
 import gzip
 import json
 import os
-import re
 import pickle
-from sentence_transformers import SentenceTransformer, CrossEncoder
+import re
+
+import faiss
+import numpy as np
+import redis
 from dotenv import load_dotenv
+from sentence_transformers import CrossEncoder, SentenceTransformer
 
 from app.logging_config import configure_logging, get_logger
 from app.metrics import CACHE_LOOKUP_TOTAL

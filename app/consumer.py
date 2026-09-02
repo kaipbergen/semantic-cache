@@ -6,7 +6,6 @@ import signal
 import redis
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 
-from app.llm import call_llm
 from app.kafka_client import (
     KAFKA_BOOTSTRAP_SERVERS,
     LLM_REQUESTS_DLQ_TOPIC,
@@ -15,6 +14,7 @@ from app.kafka_client import (
     send_with_retry,
     start_with_retry,
 )
+from app.llm import call_llm
 from app.logging_config import configure_logging, get_logger, request_id_var
 
 configure_logging()

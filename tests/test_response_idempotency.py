@@ -24,7 +24,6 @@ def test_handle_response_message_stores_cache_and_resolves_future(isolated_cache
 
 
 def test_handle_response_message_skips_duplicate_store_cache_on_redelivery(isolated_cache, monkeypatch):
-    import app.cache as cache_module
 
     mod = _setup(isolated_cache, monkeypatch)
 
