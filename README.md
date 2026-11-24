@@ -136,6 +136,8 @@ curl -X POST http://localhost:8000/query \
   -d '{"prompt": "What is machine learning?"}'
 ```
 
+See [`docs/API_EXAMPLES.md`](docs/API_EXAMPLES.md) for curl + Python examples of every endpoint.
+
 ## 📈 Run Benchmarks
 
 ```bash

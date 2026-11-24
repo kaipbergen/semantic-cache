@@ -113,7 +113,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [x] Dependency vulnerability scan in CI (pip-audit) (Day 15, 2026-09-02)
 
 ## Docs
-- [ ] API usage examples doc with curl + Python snippets for each endpoint
+- [x] API usage examples doc with curl + Python snippets for each endpoint (Day 16, 2026-11-24)
 - [ ] Architecture decision record for the two-stage retrieval design choice
 - [ ] Benchmark reproduction guide explaining tests/benchmark.py
 - [ ] Updated README with a roadmap link and status badges
