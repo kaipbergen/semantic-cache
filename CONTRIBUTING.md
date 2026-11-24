@@ -9,8 +9,13 @@ git clone https://github.com/kaipbergen/semantic-cache
 cd semantic-cache
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements-dev.txt
+pre-commit install
 cp .env.example .env
 ```
+
+`pre-commit install` wires up a git hook that runs `ruff check --fix` on changed files before
+each commit, the same check CI's lint job runs - catching lint issues locally instead of in CI.
+Run it on everything at once with `pre-commit run --all-files`.
 
 ## Running tests
 

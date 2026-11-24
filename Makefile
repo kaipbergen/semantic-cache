@@ -1,4 +1,4 @@
-.PHONY: run consumer test lint fmt audit docker-up docker-down install install-dev
+.PHONY: run consumer test lint fmt audit docker-up docker-down install install-dev hooks
 
 install:
 	venv/bin/pip install -r requirements.txt
@@ -20,6 +20,9 @@ lint:
 
 fmt:
 	venv/bin/ruff check --fix .
+
+hooks:
+	venv/bin/pre-commit install
 
 # Ignored IDs are known vulnerabilities in transitive deps (starlette via
 # fastapi==0.115.0, transformers via sentence-transformers==3.0.1) that only
