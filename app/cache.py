@@ -181,8 +181,8 @@ def get_adaptive_threshold(prompt: str) -> float:
 
 def search_cache(prompt: str):
     """Returns (response, similarity, reason). `reason` explains a miss
-    ("empty_cache", "no_candidates", "expired", "below_threshold") or marks
-    a hit ("hit")."""
+    ("empty_cache", "no_candidates", "expired", "below_threshold",
+    "redis_unavailable") or marks a hit ("hit")."""
     result = _search_cache_impl(prompt)
     CACHE_LOOKUP_TOTAL.labels(reason=result[2]).inc()
     return result
@@ -218,9 +218,23 @@ def _search_cache_impl(prompt: str):
     best_prompt = candidates[best_idx][0]
 
     if best_score >= CROSS_ENCODER_THRESHOLD:
-        cached_response = redis_client.get(best_prompt)
+        try:
+            cached_response = redis_client.get(best_prompt)
+        except redis.RedisError:
+            # Fail open: a cache lookup is an optimization, not the source of
+            # truth, so a Redis outage should fall through to a fresh LLM
+            # call (via the caller's miss path) rather than take down /query.
+            logger.warning("Redis unavailable during cache lookup, treating as a cache miss", exc_info=True)
+            stats["cache_misses"] += 1
+            return None, candidates[best_idx][1], "redis_unavailable"
         if cached_response:
-            redis_client.expire(best_prompt, get_ttl(best_prompt))
+            try:
+                redis_client.expire(best_prompt, get_ttl(best_prompt))
+            except redis.RedisError:
+                # The value was already read successfully, so still serve it
+                # as a hit - losing the sliding-TTL refresh just means this
+                # entry expires on its original schedule instead.
+                logger.warning("Redis unavailable while refreshing TTL on cache hit", exc_info=True)
             stats["cache_hits"] += 1
             return _decode_payload(cached_response), candidates[best_idx][1], "hit"
         stats["cache_misses"] += 1
@@ -271,13 +285,22 @@ def compact_index() -> int:
 
 def store_cache(prompt: str, response: str):
     ttl = get_ttl(prompt)
-    if prompt in prompt_store:
+    is_new_prompt = prompt not in prompt_store
+    emb = get_embedding(prompt) if is_new_prompt else None
+    try:
         redis_client.setex(prompt, ttl, _encode_payload(response))
+    except redis.RedisError:
+        # Fail open: the response was already served to the caller via the
+        # LLM-miss path, so losing this write just means no cache hit for
+        # this prompt until Redis recovers. Skip adding to the FAISS index
+        # too - an index entry with no backing Redis value would only ever
+        # report "expired" on lookup until compaction clears it out.
+        logger.warning("Redis unavailable, skipping cache write for prompt", exc_info=True)
         return
-    emb = get_embedding(prompt)
+    if not is_new_prompt:
+        return
     index.add(emb)
     prompt_store.append(prompt)
-    redis_client.setex(prompt, ttl, _encode_payload(response))
     if MAX_CACHE_SIZE > 0 and len(prompt_store) > MAX_CACHE_SIZE:
         _evict_oldest(len(prompt_store) - MAX_CACHE_SIZE)
     _save_index(index, prompt_store)

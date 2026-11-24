@@ -97,6 +97,15 @@ volumes:
   redis_data:   # Redis AOF persistence
 ```
 
+### 5️⃣ Reliability
+- **Redis outage fails open**: if Redis is unreachable during a `/query` lookup or write, the cache
+  treats it as a miss (`cache_reason: "redis_unavailable"`) and falls through to the LLM instead of
+  erroring out. Direct cache-management endpoints (`/cache/*`, `/status/{job_id}`) still surface an
+  error, since there's no meaningful fallback for an endpoint whose whole job is reading/writing
+  the cache.
+- **A corrupted or unreadable FAISS index/prompt_store on startup** is discarded in favor of an
+  empty index rather than crashing the app, the same way a bi-encoder-model mismatch already was.
+
 ## 🚀 Quick Start
 
 ```bash

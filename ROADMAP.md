@@ -104,7 +104,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 
 ## Security & reliability
 - [x] Max prompt length enforced before embedding to bound compute cost (Day 13, 2026-08-25)
-- [ ] Documented + tested fallback behavior when Redis is unavailable (fail open vs closed)
+- [x] Documented + tested fallback behavior when Redis is unavailable (fail open vs closed) (Day 16, 2026-11-24)
 - [x] Graceful recovery when the FAISS index file is missing/corrupted on startup (Day 16, 2026-11-24)
 - [x] Ensure GROQ_API_KEY and other secrets are never logged (Day 14, 2026-08-30)
 - [x] Timeout + circuit breaker around Groq LLM calls (Day 12, 2026-08-19)
@@ -187,3 +187,12 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
   in CI (see .github/workflows/test.yml) rather than silently passing;
   a future run should attempt the fastapi/sentence-transformers upgrades
   as their own dedicated items.
+- Day 16 (2026-11-24): "Documented + tested fallback behavior when Redis
+  is unavailable" is scoped to the /query hot path (search_cache,
+  store_cache in app/cache.py): a Redis outage there fails open (treated
+  as a cache miss / skipped write, logged as a warning) so the LLM
+  fallback still serves requests. Direct cache-management endpoints
+  (/cache/entries, /cache/seed, /status/{job_id}, DELETE /cache, ...)
+  still surface a 500 when Redis is down - they operate on the cache
+  itself, so there's no meaningful fallback for them, and failing
+  closed there is the more honest behavior.

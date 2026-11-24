@@ -2,6 +2,7 @@ import os
 
 import faiss
 import numpy as np
+import redis
 
 import app.cache as cache
 from app.cache import CACHE_TTL_LONG, CACHE_TTL_SHORT, get_adaptive_threshold, get_ttl, normalize_query
@@ -165,6 +166,60 @@ def test_search_cache_hit_refreshes_ttl(isolated_cache):
     cache.search_cache("Who invented the telephone?")
 
     assert isolated_cache.ttl("Who invented the telephone?") == CACHE_TTL_SHORT
+
+
+def test_search_cache_treats_redis_outage_as_cache_miss(isolated_cache, monkeypatch):
+    cache.store_cache("What is the capital of France?", "Paris")
+
+    def raise_connection_error(*args, **kwargs):
+        raise redis.exceptions.ConnectionError("redis is down")
+
+    monkeypatch.setattr(isolated_cache, "get", raise_connection_error)
+
+    result, _, reason = cache.search_cache("What is the capital of France?")
+
+    assert result is None
+    assert reason == "redis_unavailable"
+
+
+def test_search_cache_hit_survives_redis_error_on_ttl_refresh(isolated_cache, monkeypatch):
+    cache.store_cache("What is the capital of France?", "Paris")
+
+    def raise_connection_error(*args, **kwargs):
+        raise redis.exceptions.ConnectionError("redis is down")
+
+    monkeypatch.setattr(isolated_cache, "expire", raise_connection_error)
+
+    result, _, reason = cache.search_cache("What is the capital of France?")
+
+    assert result == "Paris"
+    assert reason == "hit"
+
+
+def test_store_cache_skips_write_when_redis_unavailable(isolated_cache, monkeypatch):
+    def raise_connection_error(*args, **kwargs):
+        raise redis.exceptions.ConnectionError("redis is down")
+
+    monkeypatch.setattr(isolated_cache, "setex", raise_connection_error)
+
+    cache.store_cache("What is the capital of France?", "Paris")
+
+    assert cache.index.ntotal == 0
+    assert cache.prompt_store == []
+
+
+def test_store_cache_does_not_add_duplicate_index_entry_when_redis_unavailable(isolated_cache, monkeypatch):
+    cache.store_cache("What is the capital of France?", "Paris")
+
+    def raise_connection_error(*args, **kwargs):
+        raise redis.exceptions.ConnectionError("redis is down")
+
+    monkeypatch.setattr(isolated_cache, "setex", raise_connection_error)
+
+    cache.store_cache("What is the capital of France?", "Paris, France")
+
+    assert cache.index.ntotal == 1
+    assert cache.prompt_store == ["What is the capital of France?"]
 
 
 def test_save_index_writes_via_temp_file_and_rename(tmp_path, monkeypatch):
