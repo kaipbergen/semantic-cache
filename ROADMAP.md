@@ -105,7 +105,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 ## Security & reliability
 - [x] Max prompt length enforced before embedding to bound compute cost (Day 13, 2026-08-25)
 - [ ] Documented + tested fallback behavior when Redis is unavailable (fail open vs closed)
-- [ ] Graceful recovery when the FAISS index file is missing/corrupted on startup
+- [x] Graceful recovery when the FAISS index file is missing/corrupted on startup (Day 16, 2026-11-24)
 - [x] Ensure GROQ_API_KEY and other secrets are never logged (Day 14, 2026-08-30)
 - [x] Timeout + circuit breaker around Groq LLM calls (Day 12, 2026-08-19)
 - [x] Input sanitization against control chars/ANSI escapes leaking into logs (Day 14, 2026-08-30)

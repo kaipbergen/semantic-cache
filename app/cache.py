@@ -66,9 +66,22 @@ def _load_index():
                 BI_ENCODER_MODEL,
             )
             return faiss.IndexFlatIP(dimension), []
-        idx = faiss.read_index(INDEX_PATH)
-        with open(STORE_PATH, "rb") as f:
-            store = pickle.load(f)
+        try:
+            idx = faiss.read_index(INDEX_PATH)
+            with open(STORE_PATH, "rb") as f:
+                store = pickle.load(f)
+        except Exception:
+            # A crash mid-write, a truncated copy, or plain bit rot can leave
+            # either file unreadable: faiss.read_index raises RuntimeError on
+            # a malformed index, and a truncated/corrupted pickle can raise
+            # any of several exceptions (UnpicklingError, EOFError, ...). Any
+            # of these would otherwise crash the app on startup, so catch
+            # broadly and start fresh rather than crash-loop.
+            logger.warning(
+                "Failed to load FAISS index/prompt_store (corrupted or unreadable) - discarding and starting fresh",
+                exc_info=True,
+            )
+            return faiss.IndexFlatIP(dimension), []
         if idx.ntotal != len(store):
             # A crash or partial write between the index and store files can
             # leave their entry counts out of sync, which corrupts the

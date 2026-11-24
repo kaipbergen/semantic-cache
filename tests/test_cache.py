@@ -415,6 +415,39 @@ def test_load_index_discards_index_when_size_mismatches_store(tmp_path, monkeypa
     assert loaded_store == []
 
 
+def test_load_index_discards_corrupted_index_file(tmp_path, monkeypatch):
+    monkeypatch.setattr(cache, "INDEX_PATH", str(tmp_path / "index.faiss"))
+    monkeypatch.setattr(cache, "STORE_PATH", str(tmp_path / "prompt_store.pkl"))
+    monkeypatch.setattr(cache, "INDEX_METADATA_PATH", str(tmp_path / "index_metadata.json"))
+
+    (tmp_path / "index.faiss").write_bytes(b"not a real faiss index")
+    import pickle
+
+    with open(tmp_path / "prompt_store.pkl", "wb") as f:
+        pickle.dump(["hello"], f)
+
+    loaded_idx, loaded_store = cache._load_index()
+
+    assert loaded_idx.ntotal == 0
+    assert loaded_store == []
+
+
+def test_load_index_discards_corrupted_prompt_store_file(tmp_path, monkeypatch):
+    monkeypatch.setattr(cache, "INDEX_PATH", str(tmp_path / "index.faiss"))
+    monkeypatch.setattr(cache, "STORE_PATH", str(tmp_path / "prompt_store.pkl"))
+    monkeypatch.setattr(cache, "INDEX_METADATA_PATH", str(tmp_path / "index_metadata.json"))
+
+    idx = faiss.IndexFlatIP(cache.dimension)
+    idx.add(np.ones((1, cache.dimension), dtype="float32"))
+    faiss.write_index(idx, str(tmp_path / "index.faiss"))
+    (tmp_path / "prompt_store.pkl").write_bytes(b"not a real pickle file")
+
+    loaded_idx, loaded_store = cache._load_index()
+
+    assert loaded_idx.ntotal == 0
+    assert loaded_store == []
+
+
 def test_compact_index_removes_expired_entries(isolated_cache):
     cache.store_cache("prompt one", "response one")
     cache.store_cache("prompt two", "response two")
