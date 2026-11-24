@@ -336,6 +336,17 @@ async def query(
         )
 
     correlation_id = str(uuid.uuid4())
+    # The request's own request_id (X-Request-ID) and the Kafka
+    # correlation_id are different values - the consumer logs under
+    # correlation_id (see app/consumer.py), not request_id, since it has no
+    # knowledge of the originating HTTP request. Logging both together here
+    # is what makes a request's API and worker log lines joinable into one
+    # trace: search for this line's request_id to find the correlation_id,
+    # then search worker logs for that correlation_id.
+    logger.info(
+        "Cache miss, dispatching to Kafka",
+        extra={"correlation_id": correlation_id},
+    )
     redis_client.setex(
         f"status:{correlation_id}", STATUS_TTL_SECONDS, json.dumps({"status": "processing"})
     )

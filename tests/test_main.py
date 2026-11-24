@@ -213,6 +213,44 @@ def test_cache_miss_resolves_via_kafka_response(api_client, monkeypatch):
     assert body["latency_ms"] is not None
 
 
+def test_cache_miss_logs_correlation_id_joinable_with_request_id(api_client, monkeypatch, capsys):
+    import json
+
+    import app.main as main_module
+
+    async def fake_send_and_wait(topic, value):
+        data = json.loads(value.decode())
+        correlation_id = data["correlation_id"]
+        future = main_module.pending_requests.get(correlation_id)
+        if future and not future.done():
+            future.set_result(
+                {"correlation_id": correlation_id, "prompt": data["prompt"], "response": "mocked llm answer"}
+            )
+
+    monkeypatch.setattr(main_module.producer, "send_and_wait", fake_send_and_wait)
+
+    response = api_client.post(
+        "/query",
+        json={"prompt": "trace me through kafka"},
+        headers={"X-Request-ID": "http-request-id-123"},
+    )
+    assert response.status_code == 200
+
+    captured = capsys.readouterr()
+    log_lines = [json.loads(line) for line in captured.out.splitlines() if line.strip().startswith("{")]
+    dispatch_logs = [line for line in log_lines if "dispatching to Kafka" in line["message"]]
+
+    assert len(dispatch_logs) == 1
+    entry = dispatch_logs[0]
+    # Same contextvar-backed request_id as the rest of this HTTP request's
+    # log lines, plus the distinct Kafka correlation_id as an extra field -
+    # together they join this API log line to the worker's log lines for
+    # the same logical request.
+    assert entry["request_id"] == "http-request-id-123"
+    assert entry["extra"]["correlation_id"]
+    assert entry["extra"]["correlation_id"] != entry["request_id"]
+
+
 def test_cache_miss_llm_error_returns_502(api_client, monkeypatch):
     import json
 
