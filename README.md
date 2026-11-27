@@ -142,7 +142,9 @@ curl -X POST http://localhost:8000/query \
   -d '{"prompt": "What is machine learning?"}'
 ```
 
-See [`docs/API_EXAMPLES.md`](docs/API_EXAMPLES.md) for curl + Python examples of every endpoint.
+See [`docs/API_EXAMPLES.md`](docs/API_EXAMPLES.md) for curl + Python examples of every endpoint,
+or [`docs/examples/query_client.py`](docs/examples/query_client.py) for a minimal, runnable
+Python client wrapping `/query` (handles the API key header and the `202`/job-polling fallback).
 
 ## 📈 Run Benchmarks
 

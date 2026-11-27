@@ -117,7 +117,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [ ] Architecture decision record for the two-stage retrieval design choice
 - [ ] Benchmark reproduction guide explaining tests/benchmark.py
 - [ ] Updated README with a roadmap link and status badges
-- [ ] Minimal Python client example wrapping /query
+- [x] Minimal Python client example wrapping /query (Day 17, 2026-11-27)
 - [ ] Minimal Node.js client example wrapping /query
 - [ ] Halfway checkpoint: update README benchmarks + short retrospective
 - [ ] Sequence diagram doc for the Kafka request/response flow
