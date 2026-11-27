@@ -24,10 +24,11 @@ fmt:
 hooks:
 	venv/bin/pre-commit install
 
-# Ignored IDs are known vulnerabilities in transitive deps (starlette via
-# fastapi==0.115.0, transformers via sentence-transformers==3.0.1) that only
-# close via a coordinated major-version upgrade of the top-level package -
-# see the CI workflow and ROADMAP.md's Notes section.
+# Ignored IDs are known vulnerabilities in sentence-transformers==3.0.1
+# itself and in transitive deps (starlette via fastapi==0.115.0, transformers
+# via sentence-transformers==3.0.1) that only close via a coordinated
+# major-version upgrade of the top-level package - see the CI workflow and
+# ROADMAP.md's Notes section.
 audit:
 	venv/bin/pip-audit -r requirements.txt \
 		--ignore-vuln PYSEC-2026-161 \
@@ -41,7 +42,10 @@ audit:
 		--ignore-vuln PYSEC-2026-2290 \
 		--ignore-vuln PYSEC-2026-2288 \
 		--ignore-vuln PYSEC-2026-2289 \
-		--ignore-vuln CVE-2026-9856
+		--ignore-vuln CVE-2026-9856 \
+		--ignore-vuln PYSEC-2026-4164 \
+		--ignore-vuln PYSEC-2026-3929 \
+		--ignore-vuln PYSEC-2026-4174
 
 docker-up:
 	docker compose up -d

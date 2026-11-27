@@ -196,6 +196,24 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
   still surface a 500 when Redis is down - they operate on the cache
   itself, so there's no meaningful fallback for them, and failing
   closed there is the more honest behavior.
+- Day 17 (2026-11-27): Discovered the "Tests" GitHub Actions workflow had
+  failed on every single run since the project's first commit (checked via
+  `gh run list` - dozens of runs, all red). Two independent causes: (1) the
+  `pytest` job collects `tests/test_consumer.py`, `test_contract.py`,
+  `test_llm.py`, and `test_response_idempotency.py`, all of which import
+  `app.llm`, which constructs a real `AsyncGroq` client at module import
+  time - that raises immediately when `GROQ_API_KEY` is unset, and CI never
+  set it (local dev worked by accident, since `cp .env.example .env` per
+  CONTRIBUTING.md leaves the literal placeholder string as a non-empty
+  value). Fixed by defaulting it to a dummy value in `tests/conftest.py`
+  (the client's `chat.completions.create` is always monkeypatched per-test,
+  so no real key is ever needed). (2) the `security` job's `pip-audit` had
+  drifted out of date: `sentence-transformers==3.0.1` and `transformers`
+  (pulled in transitively) have accumulated new CVE IDs since the ignore
+  list was last updated (Day 15). Added the new IDs
+  (PYSEC-2026-4164/3929/4174) to the ignore list in both the Makefile and
+  the workflow, for the same reason as the rest of the list - only closes
+  via a major-version bump, same as Day 15's note.
 - Day 16 (2026-11-24): "Pre-commit hooks (black + ruff)" used ruff only,
   not black - the project already standardized on ruff for both linting
   and `make fmt` (`ruff check --fix`), and ruff ships its own formatter

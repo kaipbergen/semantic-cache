@@ -8,6 +8,12 @@ import numpy as np
 import pytest
 
 os.environ.setdefault("INDEX_DIR", tempfile.mkdtemp(prefix="semantic-cache-test-"))
+# app.llm constructs a real AsyncGroq client at import time, which raises
+# immediately if GROQ_API_KEY is unset - true for CI and any machine without
+# a .env file. The client is never actually called in tests (its
+# chat.completions.create is monkeypatched per-test), so any non-empty value
+# satisfies the constructor without needing a real key.
+os.environ.setdefault("GROQ_API_KEY", "test-key-not-a-real-secret")
 
 # app.cache loads real SentenceTransformer/CrossEncoder models at import time,
 # which needs network access and ~10s+ per test run. Tests only need
