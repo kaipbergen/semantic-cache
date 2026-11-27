@@ -3,6 +3,8 @@ import json
 import os
 import pickle
 import re
+import time
+from datetime import datetime, timezone
 
 import faiss
 import numpy as np
@@ -22,6 +24,7 @@ CROSS_ENCODER_THRESHOLD = float(os.getenv("CROSS_ENCODER_THRESHOLD", 0.5))
 CACHE_TTL_SHORT = int(os.getenv("CACHE_TTL_SHORT", 3600))
 CACHE_TTL_LONG = int(os.getenv("CACHE_TTL_LONG", 86400))
 MAX_CACHE_SIZE = int(os.getenv("MAX_CACHE_SIZE", 0))
+HOURLY_STATS_RETENTION_HOURS = int(os.getenv("HOURLY_STATS_RETENTION_HOURS", 24))
 COMPRESSION_THRESHOLD_BYTES = int(os.getenv("COMPRESSION_THRESHOLD_BYTES", 1024))
 INDEX_DIR = os.getenv("INDEX_DIR", "/app/faiss_index")
 INDEX_PATH = os.path.join(INDEX_DIR, "index.faiss")
@@ -47,6 +50,41 @@ stats = {
     "total_llm_latency_ms": 0.0,
     "category_counts": {"factual": 0, "definition": 0, "explanation": 0, "default": 0},
 }
+# Rolling per-hour request/hit/miss counts, keyed by hour bucket (epoch
+# seconds // 3600) so /stats can report a trend instead of only cumulative
+# totals. Bounded to HOURLY_STATS_RETENTION_HOURS buckets - older ones are
+# dropped on write, same as the compact_index bound on prompt_store growth.
+hourly_stats: dict[int, dict] = {}
+
+def _current_hour_bucket() -> int:
+    return int(time.time() // 3600)
+
+def _record_hourly(is_hit: bool):
+    hour = _current_hour_bucket()
+    bucket = hourly_stats.setdefault(hour, {"requests": 0, "cache_hits": 0, "cache_misses": 0})
+    bucket["requests"] += 1
+    bucket["cache_hits" if is_hit else "cache_misses"] += 1
+    cutoff = hour - HOURLY_STATS_RETENTION_HOURS + 1
+    for stale_hour in [h for h in hourly_stats if h < cutoff]:
+        del hourly_stats[stale_hour]
+
+def _hourly_stats_snapshot() -> list[dict]:
+    """Last HOURLY_STATS_RETENTION_HOURS hours, oldest first, zero-filled for
+    hours with no traffic so callers can chart a fixed-width window."""
+    current_hour = _current_hour_bucket()
+    snapshot = []
+    for offset in range(HOURLY_STATS_RETENTION_HOURS - 1, -1, -1):
+        hour = current_hour - offset
+        bucket = hourly_stats.get(hour, {"requests": 0, "cache_hits": 0, "cache_misses": 0})
+        snapshot.append(
+            {
+                "hour": datetime.fromtimestamp(hour * 3600, tz=timezone.utc).strftime("%Y-%m-%dT%H:00:00Z"),
+                "requests": bucket["requests"],
+                "cache_hits": bucket["cache_hits"],
+                "cache_misses": bucket["cache_misses"],
+            }
+        )
+    return snapshot
 
 def _load_index():
     os.makedirs(os.path.dirname(INDEX_PATH), exist_ok=True)
@@ -185,6 +223,7 @@ def search_cache(prompt: str):
     "redis_unavailable") or marks a hit ("hit")."""
     result = _search_cache_impl(prompt)
     CACHE_LOOKUP_TOTAL.labels(reason=result[2]).inc()
+    _record_hourly(is_hit=result[2] == "hit")
     return result
 
 def _search_cache_impl(prompt: str):
@@ -330,4 +369,5 @@ def get_stats() -> dict:
         "index_vectors_bytes": index.ntotal * dimension * 4,
         "redis_key_count": redis_client.dbsize(),
         "category_counts": dict(stats["category_counts"]),
+        "hourly": _hourly_stats_snapshot(),
     }

@@ -653,6 +653,14 @@ def test_stats_includes_consumer_lag(api_client):
     assert response.json()["consumer_lag"] == {"total_lag": 0, "per_partition": {}}
 
 
+def test_stats_includes_hourly_rollup(api_client):
+    response = api_client.get("/stats")
+    assert response.status_code == 200
+    hourly = response.json()["hourly"]
+    assert len(hourly) == 24
+    assert all({"hour", "requests", "cache_hits", "cache_misses"} <= h.keys() for h in hourly)
+
+
 def test_stats_reports_none_consumer_lag_when_kafka_call_fails(api_client, monkeypatch):
     import app.main as main_module
 

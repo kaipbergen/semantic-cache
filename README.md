@@ -106,6 +106,12 @@ volumes:
 - **A corrupted or unreadable FAISS index/prompt_store on startup** is discarded in favor of an
   empty index rather than crashing the app, the same way a bi-encoder-model mismatch already was.
 
+### 6️⃣ Historical Stats
+`/stats` includes an `hourly` array (`HOURLY_STATS_RETENTION_HOURS`, default 24) of
+`{hour, requests, cache_hits, cache_misses}` buckets, zero-filled for hours with no traffic, so a
+dashboard can chart hit-rate trend over time instead of only the cumulative totals already in the
+rest of the response.
+
 ## 🚀 Quick Start
 
 ```bash
@@ -123,7 +129,7 @@ Open `http://localhost:8000/docs` for Swagger UI.
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `POST` | `/query` | Semantic cache lookup + LLM fallback |
-| `GET` | `/stats` | Hit rate, latency breakdown, cost savings |
+| `GET` | `/stats` | Hit rate, latency breakdown, cost savings, hourly trend |
 | `GET` | `/health` | Health check |
 | `DELETE` | `/cache` | Clear all cache |
 | `DELETE` | `/cache/{key}` | Delete specific entry |

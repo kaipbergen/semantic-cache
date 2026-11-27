@@ -289,6 +289,56 @@ def test_get_stats_reports_category_breakdown(isolated_cache):
     }
 
 
+def test_hourly_stats_buckets_requests_by_current_hour(isolated_cache, monkeypatch):
+    # 2026-01-01T10:00:00Z, an exact hour boundary for a predictable bucket key.
+    monkeypatch.setattr(cache.time, "time", lambda: 1767261600.0)
+
+    cache.search_cache("Who invented the telephone?")  # miss, empty cache
+    cache.store_cache("Who invented the telephone?", "Alexander Graham Bell")
+    cache.search_cache("Who invented the telephone?")  # hit
+
+    hourly = cache.get_stats()["hourly"]
+    current = hourly[-1]
+    assert current["hour"] == "2026-01-01T10:00:00Z"
+    assert current["requests"] == 2
+    assert current["cache_hits"] == 1
+    assert current["cache_misses"] == 1
+
+
+def test_hourly_stats_snapshot_zero_fills_hours_without_traffic(isolated_cache, monkeypatch):
+    monkeypatch.setattr(cache, "HOURLY_STATS_RETENTION_HOURS", 3)
+    monkeypatch.setattr(cache.time, "time", lambda: 1767261600.0)
+
+    cache.search_cache("Define entropy")
+
+    hourly = cache.get_stats()["hourly"]
+    assert [h["hour"] for h in hourly] == [
+        "2026-01-01T08:00:00Z",
+        "2026-01-01T09:00:00Z",
+        "2026-01-01T10:00:00Z",
+    ]
+    assert hourly[0] == {"hour": "2026-01-01T08:00:00Z", "requests": 0, "cache_hits": 0, "cache_misses": 0}
+    assert hourly[-1]["requests"] == 1
+
+
+def test_hourly_stats_prunes_buckets_older_than_retention(isolated_cache, monkeypatch):
+    monkeypatch.setattr(cache, "HOURLY_STATS_RETENTION_HOURS", 2)
+
+    monkeypatch.setattr(cache.time, "time", lambda: 1767261600.0)  # hour bucket N
+    cache.search_cache("Define entropy")
+
+    monkeypatch.setattr(cache.time, "time", lambda: 1767261600.0 + 3 * 3600)  # N + 3, outside retention
+    cache.search_cache("Explain gravity")
+
+    # The N-hour bucket falls outside the 2-hour retention window once the
+    # N+3 bucket is written, so it's dropped - only the current bucket remains.
+    assert len(cache.hourly_stats) == 1
+    hourly = cache.get_stats()["hourly"]
+    assert [h["hour"] for h in hourly] == ["2026-01-01T12:00:00Z", "2026-01-01T13:00:00Z"]
+    assert hourly[0]["requests"] == 0
+    assert hourly[-1]["requests"] == 1
+
+
 def test_isolated_cache_state_does_not_leak_between_tests(isolated_cache):
     assert cache.index.ntotal == 0
     assert cache.prompt_store == []

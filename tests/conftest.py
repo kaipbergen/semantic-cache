@@ -111,6 +111,7 @@ def isolated_cache(monkeypatch):
     monkeypatch.setattr(cache_module, "index", faiss.IndexFlatIP(cache_module.dimension))
     monkeypatch.setattr(cache_module, "prompt_store", [])
     monkeypatch.setattr(cache_module, "_save_index", lambda idx, store: None)
+    monkeypatch.setattr(cache_module, "hourly_stats", {})
     monkeypatch.setattr(
         cache_module,
         "stats",
