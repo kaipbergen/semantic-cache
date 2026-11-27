@@ -738,3 +738,30 @@ async def test_prune_expired_entries_loop_prunes_on_each_tick(isolated_cache, mo
 
     assert sleep_calls == [30, 30]
     assert cache.prompt_store == []
+
+
+def test_init_error_tracking_is_noop_when_dsn_unset(monkeypatch):
+    import app.main as main_module
+
+    monkeypatch.setattr(main_module, "SENTRY_DSN", None)
+    calls = []
+    monkeypatch.setattr(main_module.sentry_sdk, "init", lambda **kwargs: calls.append(kwargs))
+
+    main_module.init_error_tracking()
+
+    assert calls == []
+
+
+def test_init_error_tracking_initializes_sentry_when_dsn_set(monkeypatch):
+    import app.main as main_module
+
+    monkeypatch.setattr(main_module, "SENTRY_DSN", "https://examplePublicKey@o0.ingest.sentry.io/0")
+    monkeypatch.setattr(main_module, "SENTRY_TRACES_SAMPLE_RATE", 0.25)
+    calls = []
+    monkeypatch.setattr(main_module.sentry_sdk, "init", lambda **kwargs: calls.append(kwargs))
+
+    main_module.init_error_tracking()
+
+    assert calls == [
+        {"dsn": "https://examplePublicKey@o0.ingest.sentry.io/0", "traces_sample_rate": 0.25}
+    ]

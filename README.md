@@ -112,6 +112,12 @@ volumes:
 dashboard can chart hit-rate trend over time instead of only the cumulative totals already in the
 rest of the response.
 
+### 7️⃣ Error Tracking
+Setting `SENTRY_DSN` enables [Sentry](https://sentry.io) error tracking via its Starlette/FastAPI
+auto-integration - unset (the default) and it's entirely disabled, no behavior change, no network
+calls. `SENTRY_TRACES_SAMPLE_RATE` (default `0.0`) controls what fraction of requests also get
+performance tracing.
+
 ## 🚀 Quick Start
 
 ```bash

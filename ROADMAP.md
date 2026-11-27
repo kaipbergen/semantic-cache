@@ -82,7 +82,7 @@ Progress is tracked by checking items off below (`- [ ]` → `- [x] (Day N, YYYY
 - [ ] Grafana dashboard JSON for the Prometheus metrics
 - [x] Request/response logging middleware with configurable verbosity (Day 15, 2026-09-02)
 - [x] /stats historical rollup (hourly buckets) instead of only cumulative counters (Day 17, 2026-11-27)
-- [ ] Sentry or similar error-tracking integration hook (optional, env-gated)
+- [x] Sentry or similar error-tracking integration hook (optional, env-gated) (Day 17, 2026-11-27)
 - [x] Cache hit/miss reason exposed in response (e.g. "below_threshold" vs "no_candidates") (Day 9, 2026-08-11)
 - [x] Uptime/version info exposed on /health (Day 9, 2026-08-11)
 - [x] Correlation between Kafka correlation_id and access logs for full request tracing (Day 16, 2026-11-24)

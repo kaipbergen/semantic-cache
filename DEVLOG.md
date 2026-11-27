@@ -1,5 +1,40 @@
 # Dev Log
 
+## 2026-11-27
+
+Started by checking actual CI history (`gh run list`) rather than just trusting the green-looking
+badge in README - turned out the "Tests" workflow had failed on **every single run since the
+project's first commit**. Four commits today:
+
+1. **fix**: root-caused and fixed both reasons CI has never passed:
+   - `pytest` job: `test_consumer.py`/`test_contract.py`/`test_llm.py`/
+     `test_response_idempotency.py` all import `app.llm`, which builds a real `AsyncGroq` client
+     at import time - raises instantly without `GROQ_API_KEY`, which CI never set. Fixed in
+     `tests/conftest.py` with a dummy default (the client is always monkeypatched per-test, so no
+     real key is ever needed).
+   - `security` job: `pip-audit`'s ignore list had drifted out of date against new CVEs in
+     `sentence-transformers`/`transformers`; added the new IDs with the same "needs a major-version
+     bump" rationale as the existing list.
+   - Verified both fixes locally (full pytest suite, `make audit`) before trusting them.
+2. **feat**: `/stats` now includes an `hourly` rollup (`HOURLY_STATS_RETENTION_HOURS`, default 24)
+   of zero-filled `{hour, requests, cache_hits, cache_misses}` buckets, so hit-rate trend is
+   visible without an external metrics scraper diffing `/metrics` over time.
+3. **docs**: added `docs/examples/query_client.py`, a minimal `SemanticCacheClient` wrapping
+   `/query` that transparently handles the API key header and the `202`/`job_id` polling fallback
+   - tested against `httpx.MockTransport`, no live server needed.
+4. **feat**: Sentry error tracking (`SENTRY_DSN`, optional/env-gated) via its Starlette/FastAPI
+   auto-integration - unset by default, so no behavior change unless explicitly opted into.
+
+### Ideas for next time
+- Now that CI actually runs pytest, it's worth watching the next few pushes to confirm it stays
+  green rather than silently rotting again - maybe a periodic "is main's CI green" check is itself
+  worth scripting.
+- `Per-namespace cache isolation` and `Adaptive threshold auto-tuning` are still blocked for the
+  reasons noted in ROADMAP.md's Day 6/8 Notes - still true, still needs the prompt_store rework /
+  a real feedback signal respectively.
+- An architecture decision record for the two-stage retrieval design, or a benchmark reproduction
+  guide for `tests/benchmark.py`, are both small, clean, self-contained docs items for a future run.
+
 ## 2026-11-24
 
 Picked up the next unchecked items from ROADMAP.md (Day 16). Five commits:

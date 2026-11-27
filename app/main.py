@@ -5,6 +5,7 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 
+import sentry_sdk
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -48,6 +49,23 @@ API_KEY_EXEMPT_PATHS = {"/health", "/health/deep", "/docs", "/openapi.json", "/r
 CORS_ALLOWED_ORIGINS = [
     origin.strip() for origin in os.getenv("CORS_ALLOWED_ORIGINS", "*").split(",") if origin.strip()
 ]
+SENTRY_DSN = os.getenv("SENTRY_DSN")
+SENTRY_TRACES_SAMPLE_RATE = float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", 0.0))
+
+
+def init_error_tracking():
+    """Enables Sentry error tracking when SENTRY_DSN is set; a no-op
+    otherwise - this is an optional observability hook, not a hard
+    dependency for running the API. Must run before the FastAPI app is
+    constructed so Sentry's Starlette/FastAPI auto-integration can
+    instrument it."""
+    if not SENTRY_DSN:
+        return
+    sentry_sdk.init(dsn=SENTRY_DSN, traces_sample_rate=SENTRY_TRACES_SAMPLE_RATE)
+    logger.info("Sentry error tracking enabled")
+
+
+init_error_tracking()
 
 
 class TokenBucket:
